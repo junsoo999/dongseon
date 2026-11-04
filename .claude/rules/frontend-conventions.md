@@ -55,6 +55,12 @@ frontend/src/
 
 ## Styling
 
+- Color roles (`lib/theme.ts`): teal = the user's own actions, violet = AI analysis, sky = data fetched automatically
+  (fares, vacancies). Use `BTN`, `PANEL`, `BADGE` instead of ad-hoc colors; white outline buttons are for secondary
+  actions only. Background jobs show `LoadingBlock` in place of their list while running.
+- Airline logos load from Travelpayouts' logo service by IATA code (`lib/airlines.ts`), never stored, with a code
+  badge fallback. Site logos come from Simple Icons (`lib/brands.ts`).
+
 - Tailwind utility classes; avoid custom CSS unless necessary (`index.css` holds globals only).
 
 ## Tests

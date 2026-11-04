@@ -3,16 +3,13 @@ import { Link } from 'react-router'
 import type { FlightOut } from '../api/client'
 import { useFlights } from '../api/hooks'
 import { FlightSheet } from '../components/FlightSheet'
+import { LegLine } from '../components/LegLine'
+import { carrierCode } from '../lib/airlines'
+import type { LegSegment } from '../lib/legs'
+import { BTN } from '../lib/theme'
 import { LiveFares } from '../components/LivePrices'
 import { FlightSearchLinks } from '../components/SearchLinks'
-import {
-  formatKrw,
-  formatLocal,
-  formatMinutes,
-  formatMoney,
-  formatSpan,
-  minutesBetween,
-} from '../lib/format'
+import { formatKrw, formatLocal, formatMoney, formatSpan, minutesBetween } from '../lib/format'
 import { useCurrentTrip } from '../lib/trip'
 import { Page } from '../components/MapLayout'
 
@@ -92,34 +89,50 @@ function Timeline({ flights }: { flights: FlightOut[] }) {
   )
 }
 
+function legSegments(f: FlightOut, direction: 'out' | 'back'): LegSegment[] {
+  return f.legs
+    .filter((l) => l.direction === direction)
+    .map((l) => ({
+      flight: l.flight_no,
+      carrierCode: carrierCode(l.flight_no),
+      carrier: l.carrier,
+      depAirport: l.dep_airport,
+      depLocal: l.dep_local,
+      arrAirport: l.arr_airport,
+      arrLocal: l.arr_local,
+      durationMin: l.duration_min,
+    }))
+}
+
 function FlightCard({ f, best, onEdit }: { f: FlightOut; best: boolean; onEdit: () => void }) {
   const e = f.evaluation
+  const krw = e?.total_krw ?? (f.currency === 'KRW' ? f.total_amount : null)
   return (
     <button
       type="button"
       onClick={onEdit}
-      className="block w-full rounded-xl border border-gray-200 bg-white p-4 text-left"
+      className={`block w-full space-y-3 rounded-2xl border bg-white p-4 text-left shadow-sm hover:border-teal-300 ${f.status === 'booked' ? 'border-teal-500 ring-1 ring-teal-500' : 'border-gray-200'}`}
     >
-      <div className="mb-2 flex items-start gap-2">
+      <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-1.5 font-semibold">
             {f.label}
             {f.status === 'booked' && (
-              <span className="rounded bg-teal-100 px-1.5 text-xs text-teal-800">확정</span>
+              <span className="rounded-md bg-teal-600 px-1.5 py-0.5 text-xs font-semibold text-white">
+                확정
+              </span>
             )}
             {best && (
-              <span className="rounded bg-amber-100 px-1.5 text-xs text-amber-800">
+              <span className="rounded-md bg-amber-500 px-1.5 py-0.5 text-xs font-semibold text-white">
                 현지 시간 최다
               </span>
             )}
           </p>
-          {f.baggage_note && <p className="text-xs text-gray-500">{f.baggage_note}</p>}
+          {f.baggage_note && <p className="text-xs text-gray-500">🧳 {f.baggage_note}</p>}
         </div>
         {f.total_amount !== null && (
-          <p className="shrink-0 text-right text-sm font-semibold">
-            {e?.total_krw != null && f.currency !== 'KRW'
-              ? formatKrw(e.total_krw)
-              : formatMoney(f.total_amount, f.currency)}
+          <p className="shrink-0 text-right text-lg leading-tight font-bold">
+            {krw !== null ? formatKrw(krw) : formatMoney(f.total_amount, f.currency)}
             {f.currency !== 'KRW' && (
               <span className="block text-xs font-normal text-gray-500">
                 {formatMoney(f.total_amount, f.currency)}
@@ -128,24 +141,13 @@ function FlightCard({ f, best, onEdit }: { f: FlightOut; best: boolean; onEdit: 
           </p>
         )}
       </div>
-      <ul className="mb-2 space-y-0.5 text-sm">
-        {f.legs.map((l, i) => (
-          <li key={i} className="text-gray-700">
-            <span className="mr-1 text-xs text-gray-500">
-              {l.direction === 'out' ? '가는 편' : '오는 편'}
-            </span>
-            {l.flight_no && <span className="mr-1 font-medium">{l.flight_no}</span>}
-            {l.dep_airport} {formatLocal(l.dep_local)} → {l.arr_airport}{' '}
-            {formatLocal(l.arr_local).split(' ')[1]}
-            <span className="ml-1 text-xs text-gray-500">({formatMinutes(l.duration_min)})</span>
-          </li>
-        ))}
-      </ul>
+      <LegLine label="가는 편" segs={legSegments(f, 'out')} />
+      <LegLine label="오는 편" segs={legSegments(f, 'back')} />
       {e && (
-        <div className="rounded-lg bg-gray-50 p-2 text-sm">
+        <div className="space-y-0.5 rounded-xl bg-slate-50 p-3 text-sm">
           {e.usable_min !== null ? (
             <p>
-              현지 가용 <strong>{formatSpan(e.usable_min)}</strong>
+              현지 <strong>{formatSpan(e.usable_min)}</strong>
               {e.krw_per_usable_hour !== null && (
                 <span className="text-gray-600"> · 1시간당 {formatKrw(e.krw_per_usable_hour)}</span>
               )}
@@ -172,9 +174,9 @@ function FlightCard({ f, best, onEdit }: { f: FlightOut; best: boolean; onEdit: 
           ))}
         </div>
       )}
-      {f.problems.map((p) => (
-        <p key={p} className="mt-1 text-xs text-red-700">
-          {p}
+      {f.problems.map((pr) => (
+        <p key={pr} className="text-xs text-red-700">
+          {pr}
         </p>
       ))}
     </button>
@@ -219,7 +221,7 @@ export function Flights() {
         <button
           type="button"
           onClick={() => setSheet({ flight: null })}
-          className="min-h-11 shrink-0 rounded-lg bg-teal-700 px-4 text-sm font-semibold text-white"
+          className={`${BTN.primary} shrink-0`}
         >
           + 항공 후보
         </button>

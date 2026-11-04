@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { AiSuggestionOut } from '../api/client'
-import { useDecideSuggestion, useJob, useStartJob, useSuggestions } from '../api/hooks'
+import { useDecideSuggestion, useJob, useSuggestions } from '../api/hooks'
 import { formatLocal } from '../lib/format'
 import { categoryLabel, MEAL_LABELS } from '../lib/places'
-import { useQueryClient } from '@tanstack/react-query'
+import { BADGE, BTN, PANEL } from '../lib/theme'
+import { JobButton } from './JobButton'
+import { LoadingBlock } from './Loading'
 
 const RESERVATION: Record<string, string> = {
   required: '예약 필수',
@@ -61,7 +63,7 @@ function Card({ s, tripId }: { s: AiSuggestionOut; tripId: number }) {
         ]
       : []
   return (
-    <li className="space-y-1 p-3">
+    <li className="space-y-1 p-4">
       <p className="flex flex-wrap items-baseline gap-x-2">
         <span className="font-medium">{title}</span>
         {local && local !== title && <span className="text-xs text-gray-500">{local}</span>}
@@ -78,7 +80,7 @@ function Card({ s, tripId }: { s: AiSuggestionOut; tripId: number }) {
           type="button"
           disabled={decide.isPending || (s.kind === 'stay' && !s.google_place_id)}
           onClick={() => decide.mutate({ id: s.id, accept: true })}
-          className="min-h-11 flex-1 rounded-lg bg-teal-700 text-sm font-semibold text-white disabled:opacity-50"
+          className={`${BTN.primary} flex-1`}
         >
           {s.kind === 'place' ? '여행에 넣기' : '숙소 후보로'}
         </button>
@@ -86,7 +88,7 @@ function Card({ s, tripId }: { s: AiSuggestionOut; tripId: number }) {
           type="button"
           disabled={decide.isPending}
           onClick={() => decide.mutate({ id: s.id, accept: false })}
-          className="min-h-11 flex-1 rounded-lg border border-gray-300 text-sm"
+          className={`${BTN.secondary} flex-1`}
         >
           관심 없음
         </button>
@@ -99,53 +101,42 @@ function Card({ s, tripId }: { s: AiSuggestionOut; tripId: number }) {
 export function AiSuggestions({ tripId, kind }: { tripId: number; kind: 'place' | 'stay' }) {
   const suggestions = useSuggestions(tripId, kind)
   const job = useJob('scout')
-  const start = useStartJob('scout')
-  const qc = useQueryClient()
-  const wasRunning = useRef(false)
   const running = job.data?.running ?? false
-
-  useEffect(() => {
-    if (wasRunning.current && !running)
-      void qc.invalidateQueries({ queryKey: ['suggestions', tripId] })
-    wasRunning.current = running
-  }, [running, qc, tripId])
-
+  const invalidate = useMemo(() => [['suggestions', tripId]], [tripId])
   const list = suggestions.data ?? []
   const [open, setOpen] = useState(false)
   const shown = open ? list : list.slice(0, FOLDED)
+
   return (
-    <div className="rounded-xl border border-violet-200 bg-violet-50/50">
-      <div className="flex items-center gap-2 p-3">
+    <div className={`${PANEL.ai} overflow-hidden`}>
+      <div className="flex items-center gap-2 p-4">
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 font-semibold">
-            AI 추천
-            <span className="rounded bg-violet-100 px-1.5 text-xs font-normal text-violet-800">
-              AI 제안
-            </span>
+            AI 추천 <span className={BADGE.ai}>AI 제안</span>
           </p>
           <p className="text-xs text-gray-600">
-            {running
-              ? '웹에서 찾는 중… (몇 분 걸립니다)'
-              : job.data?.last_ran_at
-                ? `마지막 조사 ${formatLocal(job.data.last_ran_at.slice(0, 16))} UTC${job.data.last_status && job.data.last_status !== 'ok' ? ' · 실패' : ''}`
-                : '아직 조사하지 않았습니다'}
+            {job.data?.last_ran_at
+              ? `마지막 조사 ${formatLocal(job.data.last_ran_at.slice(0, 16))} UTC${job.data.last_status && job.data.last_status !== 'ok' ? ' · 실패' : ''}`
+              : '아직 조사하지 않았습니다'}
           </p>
         </div>
-        <button
-          type="button"
-          disabled={running || start.isPending}
-          onClick={() => start.mutate()}
-          className="min-h-11 shrink-0 rounded-lg border border-violet-300 bg-white px-3 text-sm disabled:opacity-50"
-        >
-          {running ? '조사 중' : '새로 찾기'}
-        </button>
+        <JobButton name="scout" label="새로 찾기" tone="ai" invalidate={invalidate} />
       </div>
-      {start.error && <p className="px-3 pb-2 text-xs text-red-700">{start.error.message}</p>}
-      {job.data?.last_status &&
+      {!running &&
+        job.data?.last_status &&
         job.data.last_status !== 'ok' &&
-        job.data.last_error &&
-        !running && <p className="px-3 pb-2 text-xs text-red-700">{job.data.last_error}</p>}
-      {list.length > 0 ? (
+        job.data.last_error && (
+          <p className="px-4 pb-2 text-xs text-red-700">{job.data.last_error}</p>
+        )}
+      {running ? (
+        <div className="px-4 pb-4">
+          <LoadingBlock
+            tone="ai"
+            title="Claude가 웹에서 찾는 중…"
+            hint="출처를 확인하며 조사해서 몇 분 걸립니다"
+          />
+        </div>
+      ) : list.length > 0 ? (
         <ul className="divide-y divide-violet-100 border-t border-violet-100 bg-white">
           {shown.map((s) => (
             <Card key={s.id} s={s} tripId={tripId} />
@@ -155,7 +146,7 @@ export function AiSuggestions({ tripId, kind }: { tripId: number; kind: 'place' 
               <button
                 type="button"
                 onClick={() => setOpen(!open)}
-                className="min-h-11 w-full text-sm text-violet-800"
+                className="min-h-11 w-full text-sm font-medium text-violet-800"
               >
                 {open ? '접기' : `추천 ${list.length - FOLDED}개 더 보기`}
               </button>
@@ -163,11 +154,9 @@ export function AiSuggestions({ tripId, kind }: { tripId: number; kind: 'place' 
           )}
         </ul>
       ) : (
-        !running && (
-          <p className="px-3 pb-3 text-sm text-gray-500">
-            새 추천이 없습니다. '새로 찾기'를 눌러 보세요.
-          </p>
-        )
+        <p className="px-4 pb-4 text-sm text-gray-500">
+          새 추천이 없습니다. '새로 찾기'를 눌러 보세요.
+        </p>
       )}
     </div>
   )

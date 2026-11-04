@@ -782,8 +782,12 @@ export interface components {
       direction: string
       /** Flight */
       flight: string
+      /** Carrier Code */
+      carrier_code: string
       /** Carrier */
       carrier: string | null
+      /** Duration Min */
+      duration_min: number
       /** Dep Airport */
       dep_airport: string
       /** Dep Local */

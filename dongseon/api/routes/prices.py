@@ -33,7 +33,9 @@ class FareLegOut(BaseModel):
 
     direction: str
     flight: str
+    carrier_code: str
     carrier: str | None
+    duration_min: int
     dep_airport: str
     dep_local: str
     arr_airport: str
@@ -175,7 +177,14 @@ def fares(
                     FareLegOut(
                         direction=leg["direction"],
                         flight=f"{leg['carrier_code']}{leg['flight_number']}",
+                        carrier_code=leg["carrier_code"],
                         carrier=leg.get("carrier_name"),
+                        duration_min=round(
+                            (
+                                datetime.fromisoformat(leg["arr_at"]) - datetime.fromisoformat(leg["dep_at"])
+                            ).total_seconds()
+                            / 60
+                        ),
                         dep_airport=leg["dep_airport"],
                         dep_local=datetime.fromisoformat(leg["dep_at"])
                         .astimezone(tz(leg["dep_airport"]))

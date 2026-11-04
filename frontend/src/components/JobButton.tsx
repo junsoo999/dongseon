@@ -1,16 +1,19 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { useJob, useStartJob } from '../api/hooks'
+import { BTN, type Tone } from '../lib/theme'
 
 /** Starts a background job and refreshes `invalidate` query keys when it finishes. */
 export function JobButton({
   name,
   label,
   invalidate,
+  tone,
 }: {
   name: 'scout' | 'prices'
   label: string
   invalidate: unknown[][]
+  tone: Tone
 }) {
   const job = useJob(name)
   const start = useStartJob(name)
@@ -29,9 +32,15 @@ export function JobButton({
       type="button"
       disabled={running || start.isPending}
       onClick={() => start.mutate()}
-      className="min-h-11 shrink-0 rounded-xl border border-gray-300 bg-white px-3 text-sm disabled:opacity-50"
+      className={`${BTN[tone]} shrink-0 px-3`}
     >
-      {running ? '가져오는 중…' : label}
+      {running && (
+        <span
+          aria-hidden
+          className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+        />
+      )}
+      {running ? (tone === 'ai' ? '찾는 중' : '가져오는 중') : label}
     </button>
   )
 }
