@@ -234,7 +234,7 @@ dongseon/
 
 1. 앱 안 검색: Places Autocomplete와 Text Search. `languageCode=ko`, `regionCode`는 도시 config에서 가져옵니다. 결과를 추가하면 Place와 Pin이 생기고, 라벨 기본값은 사용자가 입력한 검색어입니다 (6절).
 2. URL 붙여넣기: Google Maps 공유 URL(`maps.app.goo.gl` 단축 URL 포함)을 받아 place_id로 해석합니다. 단축 URL은 redirect를 따라가 이름과 좌표를 얻고 Text Search로 매칭합니다.
-3. Takeout 가져오기: `Takeout/Saved/*.csv`를 올리면 리스트 이름은 태그, Title은 라벨, Note는 메모로 넣고 URL로 place_id를 찾습니다. 해석에 실패하면 `resolve_status=failed`로 남기고 화면에서 수동 매칭합니다. 대량 해석은 백그라운드 CLI 잡으로 돌립니다.
+3. (M6 선택) Takeout 가져오기: `Takeout/Saved/*.csv`를 올리면 리스트 이름은 태그, Title은 라벨, Note는 메모로 넣고 URL로 place_id를 찾습니다. 해석에 실패하면 `resolve_status=failed`로 남기고 화면에서 수동 매칭합니다. 대량 해석은 백그라운드 CLI 잡으로 돌립니다.
 4. AI 추천: 13절 맛집 조사 결과를 `priority=maybe`, `added_by=ai`로 넣습니다.
 
 Google `types`(추가할 때 한 번 조회. Place Details에서 `types`는 Essentials, `primaryType`은 Pro라서 `types`를 씀)는 `config/defaults.yaml`의 매핑으로 앱 카테고리(food / cafe / bar / sight / museum / shopping / experience 등)에 대응시키고, 사용자가 바꿀 수 있습니다. 카테고리별 기본 체류시간도 defaults에 둡니다.
@@ -453,12 +453,12 @@ uv run --no-sync dongseon serve
 | # | 내용 | 완료 기준 |
 |---|---|---|
 | M0 | jipsa 패턴 스캐폴드(0절 표), 포트 8100/8101/5174, `/api/health`, React 앱, rules, CI, `docs/google-terms.md`, `api_usage` 계측 골격 | `make dev`로 두 서버가 뜨고 health가 보임. 사용자가 약관 요약을 확인 |
-| M1 | 여행과 장소: trips, Places 검색·자동완성, URL 붙여넣기, Takeout 가져오기와 해석, 핀 CRUD, Google 지도와 리스트 (모바일) | Takeout 리스트를 가져와 지도에 핀이 찍히고 우선순위·체류시간을 편집할 수 있음 |
+| M1 | 여행과 장소: trips, Places 검색·자동완성, URL 붙여넣기, 핀 CRUD, Google 지도와 리스트 (모바일) | 검색이나 링크로 추가한 장소가 지도에 찍히고 우선순위·체류시간을 편집할 수 있음 |
 | M2 | 숙소와 항공: 이동시간 행렬(근사, transit), 동네 점수, 숙소 후보 비교, 항공 후보 입력과 평가 | 휴대폰에서 핀 기준 동네 순위와 숙소·항공 후보 비교를 볼 수 있음 |
 | M3 | 일정: 날짜별 영업 시간창, OR-Tools solver, validator, 타임라인·날짜별 지도, 드래그·잠금·다시 맞추기, 버전, Google Maps 딥링크 | 5일 일정 초안이 경고와 함께 나오고 편집 후 다시 맞추기가 동작 |
 | M4 | AI: claude_cli 이식, plan_review, rain_plan, food_research, hours_research, stay_area_notes, booking_parse, 제안 수락 흐름 | AI 제안이 재solve와 검증을 거쳐 diff로 보이고 수락하면 새 버전이 생김 |
 | M5 | 여행 모드: 오늘 화면, 날씨·환율, D-7 영업시간 갱신, `daily`와 launchd, `serve` 상시 실행, 원격 접속, PWA 오프라인, ICS·인쇄 내보내기, 체크리스트 | 휴대폰 데이터망으로 원격 도메인에서 오늘 일정과 길찾기가 열리고, 비행기 모드에서도 일정을 읽을 수 있음 |
-| M6 | (선택) 여행 중 지출 기록, 여행 후 회고(실제 방문 체크, 체류시간 보정), 항공·숙소 가격 adapter, 다른 도시 config | 사용자와 범위를 합의한 뒤 |
+| M6 | (선택) Google Takeout "저장됨" 가져오기(2026-11-05 사용자 요청으로 M1에서 이동), 여행 중 지출 기록, 여행 후 회고(실제 방문 체크, 체류시간 보정), 항공·숙소 가격 adapter, 다른 도시 config | 사용자와 범위를 합의한 뒤 |
 
 ---
 
