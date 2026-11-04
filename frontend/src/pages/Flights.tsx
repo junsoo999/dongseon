@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import type { FlightOut } from '../api/client'
 import { useFlights } from '../api/hooks'
 import { FlightSheet } from '../components/FlightSheet'
+import { FlightSearchLinks } from '../components/SearchLinks'
 import {
   formatKrw,
   formatLocal,
@@ -12,6 +13,7 @@ import {
   minutesBetween,
 } from '../lib/format'
 import { useCurrentTrip } from '../lib/trip'
+import { Page } from '../components/MapLayout'
 
 const REF_LABEL = { booked_stay: '확정 숙소', top_area: '1위 동네', none: '' } as const
 
@@ -181,7 +183,7 @@ export function Flights() {
   if (trips.isPending) return <p className="text-gray-500">불러오는 중…</p>
   if (!trip) {
     return (
-      <section className="space-y-3">
+      <Page>
         <h1 className="text-xl font-bold">항공</h1>
         <Link
           to="/"
@@ -189,7 +191,7 @@ export function Flights() {
         >
           홈에서 여행 만들기
         </Link>
-      </section>
+      </Page>
     )
   }
 
@@ -200,7 +202,7 @@ export function Flights() {
   const noReference = list.some((f) => f.evaluation?.reference_kind === 'none')
 
   return (
-    <section className="space-y-4">
+    <Page>
       <div className="flex items-center gap-2">
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold">항공 후보</h1>
@@ -217,6 +219,7 @@ export function Flights() {
         </button>
       </div>
 
+      <FlightSearchLinks tripId={trip.id} />
       {flights.isError && <p className="text-sm text-red-700">{flights.error.message}</p>}
       {noReference && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -250,6 +253,6 @@ export function Flights() {
       </div>
 
       {sheet && <FlightSheet trip={trip} flight={sheet.flight} onClose={() => setSheet(null)} />}
-    </section>
+    </Page>
   )
 }

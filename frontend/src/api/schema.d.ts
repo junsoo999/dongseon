@@ -376,6 +376,86 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/trips/{trip_id}/suggestions': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List Suggestions
+     * @description List AI suggestions for a trip, newest first.
+     */
+    get: operations['list_suggestions_api_trips__trip_id__suggestions_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/suggestions/{suggestion_id}/accept': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Accept
+     * @description Turn a place suggestion into a "maybe" pin, or a stay suggestion into a stay candidate.
+     */
+    post: operations['accept_api_suggestions__suggestion_id__accept_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/suggestions/{suggestion_id}/reject': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Reject
+     * @description Reject a suggestion; later research skips it.
+     */
+    post: operations['reject_api_suggestions__suggestion_id__reject_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/search-links': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Search Links
+     * @description Flight searches from the home airports and Airbnb/Booking searches for the top areas.
+     */
+    get: operations['search_links_api_trips__trip_id__search_links_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/jobs/{name}': {
     parameters: {
       query?: never
@@ -405,6 +485,44 @@ export type webhooks = Record<string, never>
 export interface components {
   schemas: {
     /**
+     * AcceptOut
+     * @description What accepting created.
+     */
+    AcceptOut: {
+      /** Pin Id */
+      pin_id: number | null
+      /** Stay Id */
+      stay_id: number | null
+    }
+    /**
+     * AiSuggestionOut
+     * @description A pending or decided AI suggestion. Everything in it is AI-generated ("AI 제안") with sources.
+     */
+    AiSuggestionOut: {
+      /** Id */
+      id: number
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'place' | 'stay'
+      /** Status */
+      status: string
+      /** Google Place Id */
+      google_place_id: string | null
+      /** Lat */
+      lat: number | null
+      /** Lng */
+      lng: number | null
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      place: components['schemas']['PlaceItem'] | null
+      stay: components['schemas']['StayItem'] | null
+    }
+    /**
      * AirportOut
      * @description An airport for the leg form.
      */
@@ -415,6 +533,32 @@ export interface components {
       name: string
       /** Timezone */
       timezone: string
+    }
+    /**
+     * AreaLinksOut
+     * @description Booking-site searches for one area.
+     */
+    AreaLinksOut: {
+      /** Area */
+      area: string
+      /** Emoji */
+      emoji: string | null
+      /** Rank */
+      rank: number | null
+      /** Links */
+      links: components['schemas']['LinkOut'][]
+    }
+    /**
+     * AutocompleteOut
+     * @description One autocomplete suggestion (display only; show the Google Maps attribution next to the list).
+     */
+    AutocompleteOut: {
+      /** Google Place Id */
+      google_place_id: string
+      /** Main Text */
+      main_text: string
+      /** Secondary Text */
+      secondary_text: string
     }
     /**
      * CategoryOut
@@ -657,6 +801,18 @@ export interface components {
       duration_min: number
     }
     /**
+     * LinkOut
+     * @description An outbound search link.
+     */
+    LinkOut: {
+      /** Site */
+      site: string
+      /** Label */
+      label: string
+      /** Url */
+      url: string
+    }
+    /**
      * OriginOut
      * @description Approximate travel summary from one area or stay (minutes; lower is better).
      */
@@ -670,6 +826,8 @@ export interface components {
       id: string
       /** Label */
       label: string
+      /** Emoji */
+      emoji: string | null
       /** Lat */
       lat: number | null
       /** Lng */
@@ -784,6 +942,45 @@ export interface components {
       google_place_id?: string | null
     }
     /**
+     * PlaceItem
+     * @description One researched place.
+     */
+    PlaceItem: {
+      /** Name */
+      name: string
+      /** Name Local */
+      name_local?: string | null
+      /** Area */
+      area: string
+      /**
+       * Category
+       * @enum {string}
+       */
+      category: 'food' | 'cafe' | 'bar' | 'sight' | 'museum' | 'shopping' | 'experience'
+      /** Meal */
+      meal?: ('lunch' | 'dinner') | null
+      /** Why */
+      why: string
+      /**
+       * Reservation
+       * @default unknown
+       * @enum {string}
+       */
+      reservation: 'required' | 'recommended' | 'not_needed' | 'unknown'
+      /** Price Range */
+      price_range?: string | null
+      /** Holiday Note */
+      holiday_note?: string | null
+      /** Sources */
+      sources: components['schemas']['Source'][]
+      /**
+       * Confidence
+       * @default medium
+       * @enum {string}
+       */
+      confidence: 'high' | 'medium' | 'low'
+    }
+    /**
      * ResolveUrlIn
      * @description A pasted Google Maps URL.
      */
@@ -832,6 +1029,16 @@ export interface components {
       origins: components['schemas']['OriginOut'][]
     }
     /**
+     * SearchLinksOut
+     * @description Search links with the trip's route, dates and travelers filled in.
+     */
+    SearchLinksOut: {
+      /** Flights */
+      flights: components['schemas']['LinkOut'][]
+      /** Stays */
+      stays: components['schemas']['AreaLinksOut'][]
+    }
+    /**
      * SkuUsageOut
      * @description One SKU's calls this month against its free cap (``cap`` is null when Google sets none).
      */
@@ -847,6 +1054,16 @@ export interface components {
        * @enum {string}
        */
       level: 'ok' | 'warn' | 'stop'
+    }
+    /**
+     * Source
+     * @description A cited page.
+     */
+    Source: {
+      /** Title */
+      title: string
+      /** Url */
+      url: string
     }
     /**
      * StayIn
@@ -884,6 +1101,47 @@ export interface components {
        * @enum {string}
        */
       status: 'candidate' | 'booked'
+    }
+    /**
+     * StayItem
+     * @description One researched hotel-type stay.
+     */
+    StayItem: {
+      /** Name */
+      name: string
+      /** Name Local */
+      name_local?: string | null
+      /** Area */
+      area: string
+      /**
+       * Type
+       * @default hotel
+       * @enum {string}
+       */
+      type: 'hotel' | 'apartment_hotel' | 'ryokan' | 'other'
+      /** Has Bathtub */
+      has_bathtub?: boolean | null
+      /** Nightly Low */
+      nightly_low?: number | null
+      /** Nightly High */
+      nightly_high?: number | null
+      /**
+       * Currency
+       * @default JPY
+       */
+      currency: string
+      /** Price Note */
+      price_note?: string | null
+      /** Why */
+      why: string
+      /** Sources */
+      sources: components['schemas']['Source'][]
+      /**
+       * Confidence
+       * @default medium
+       * @enum {string}
+       */
+      confidence: 'high' | 'medium' | 'low'
     }
     /**
      * StayOut
@@ -951,18 +1209,6 @@ export interface components {
       note?: string | null
       /** Status */
       status?: ('candidate' | 'booked') | null
-    }
-    /**
-     * SuggestionOut
-     * @description One autocomplete suggestion (display only; show the Google Maps attribution next to the list).
-     */
-    SuggestionOut: {
-      /** Google Place Id */
-      google_place_id: string
-      /** Main Text */
-      main_text: string
-      /** Secondary Text */
-      secondary_text: string
     }
     /**
      * TripIn
@@ -1303,7 +1549,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['SuggestionOut'][]
+          'application/json': components['schemas']['AutocompleteOut'][]
         }
       }
       /** @description Validation Error */
@@ -1829,12 +2075,137 @@ export interface operations {
       }
     }
   }
+  list_suggestions_api_trips__trip_id__suggestions_get: {
+    parameters: {
+      query?: {
+        kind?: ('place' | 'stay') | null
+        status?: 'pending' | 'accepted' | 'rejected'
+      }
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AiSuggestionOut'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  accept_api_suggestions__suggestion_id__accept_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        suggestion_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AcceptOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  reject_api_suggestions__suggestion_id__reject_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        suggestion_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  search_links_api_trips__trip_id__search_links_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SearchLinksOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   job_status_api_jobs__name__get: {
     parameters: {
       query?: never
       header?: never
       path: {
-        name: 'places-resolve'
+        name: 'places-resolve' | 'scout'
       }
       cookie?: never
     }
@@ -1865,7 +2236,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        name: 'places-resolve'
+        name: 'places-resolve' | 'scout'
       }
       cookie?: never
     }

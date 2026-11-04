@@ -16,8 +16,8 @@ from dongseon.db.models import JobLog
 
 router = APIRouter(tags=["jobs"])
 
-JobName = Literal["places-resolve"]
-JOB_ARGS: dict[str, list[str]] = {"places-resolve": ["places", "resolve"]}
+JobName = Literal["places-resolve", "scout"]
+JOB_ARGS: dict[str, list[str]] = {"places-resolve": ["places", "resolve"], "scout": ["scout"]}
 
 
 class JobStatus(BaseModel):

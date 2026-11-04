@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { HealthBadge } from '../components/HealthBadge'
+import { Page } from '../components/MapLayout'
 
 const ITEMS = [
   { to: '/stays', label: '숙소', hint: '동네 점수, 후보 숙소 비교' },
@@ -10,7 +11,7 @@ const ITEMS = [
 
 export function More() {
   return (
-    <section>
+    <Page>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold">더보기</h1>
         <HealthBadge />
@@ -25,6 +26,6 @@ export function More() {
           </li>
         ))}
       </ul>
-    </section>
+    </Page>
   )
 }

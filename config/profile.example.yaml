@@ -21,3 +21,7 @@ walking:
 food:
   likes: []
   avoid: []
+stay:
+  prefer: []          # e.g. [airbnb, hotel]
+  wants: []           # e.g. [욕조]
+  nightly_budget_krw: null

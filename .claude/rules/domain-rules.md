@@ -78,3 +78,8 @@ alwaysApply: true
 - The LLM proposes edits (`move` / `swap` / `drop` / `add_from_pool` / `set_dwell`) and never sets times. Every
   suggestion is re-solved and validated before it is shown as applicable, and becomes a new version only when accepted.
 - Research results without a source URL are dropped. Everything AI-generated carries "AI 제안".
+- Scouting (`dongseon/llm/research.py`, `dongseon scout`): suggestions are matched to place IDs with IDs Only search,
+  matches farther than 40 km from the city center are dropped, and the same input is not researched again within 7 days.
+  Accepting makes a "maybe" pin (`added_by=ai`) or a stay candidate; rejected names are sent back as `rejected`.
+- Never collect listings from booking sites (Airbnb, Booking.com, Google Flights pages). Open them as deep links
+  (`dongseon/links.py`) and let the user add what they pick.

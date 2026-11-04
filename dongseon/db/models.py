@@ -205,3 +205,36 @@ class FlightLeg(Base):
     arr_at: Mapped[datetime] = mapped_column(UTCDateTime())
 
     option: Mapped[FlightOption] = relationship(back_populates="legs")
+
+
+class LlmRun(Base):
+    """One headless Claude Code call, for the daily token limit and troubleshooting."""
+
+    __tablename__ = "llm_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str]  # e.g. "places_research"
+    model: Mapped[str]
+    prompt_version: Mapped[str]
+    tokens: Mapped[int]
+    cost_usd: Mapped[float | None]
+    ok: Mapped[bool]
+    error: Mapped[str | None]
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), index=True)
+
+
+class AiSuggestion(Base):
+    """An AI suggestion waiting for the user (accept turns it into a pin or stay candidate)."""
+
+    __tablename__ = "ai_suggestions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str]  # place | stay (later: review | rain | hours)
+    key: Mapped[str]  # dedupe key: normalized name
+    payload_json: Mapped[str]  # validated research item, incl. sources
+    google_place_id: Mapped[str | None]
+    status: Mapped[str] = mapped_column(default="pending")  # pending | accepted | rejected
+    prompt_version: Mapped[str]
+    input_hash: Mapped[str]
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), index=True)

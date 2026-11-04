@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { mockApi } from '../test/mockApi'
 import { Stays } from './Stays'
 
 vi.mock('../components/StaysMap', () => ({
@@ -88,19 +89,14 @@ describe('Stays', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('ranks areas and stays with airport times and nightly price', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((url: string) => {
-        const body = url.includes('/stays/score')
-          ? score
-          : url.includes('/stays')
-            ? stays
-            : url.includes('/pins')
-              ? []
-              : [trip]
-        return Promise.resolve(new Response(JSON.stringify(body)))
-      }),
-    )
+    mockApi([
+      ['/stays/score', score],
+      ['/stays', stays],
+      ['/pins', []],
+      ['/suggestions', []],
+      ['/search-links', { flights: [], stays: [] }],
+      ['/api/trips', [trip]],
+    ])
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(
       <QueryClientProvider client={client}>
@@ -110,7 +106,8 @@ describe('Stays', () => {
       </QueryClientProvider>,
     )
     expect(await screen.findByText('긴자')).toBeInTheDocument()
-    expect(screen.getAllByText(/하네다 45분 · 나리타 1시간 5분/)).toHaveLength(2)
+    expect(screen.getAllByText(/하네다 45분/)).toHaveLength(2)
+    expect(screen.getAllByText(/나리타 1시간 5분/)).toHaveLength(2)
     expect(screen.getByText('₩253,761')).toBeInTheDocument()
     expect(screen.getByText(/4박/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '예약 페이지' })).toHaveAttribute(

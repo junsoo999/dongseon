@@ -1,5 +1,7 @@
 key: tokyo
 name: 도쿄
+name_en: Tokyo
+iata_city: TYO  # HND + NRT
 country: JP
 region_code: JP  # Places API regionCode
 timezone: Asia/Tokyo
@@ -15,13 +17,13 @@ airports:
       - {hub_label: 닛포리, hub_query: "Nippori Station", ride_min: 36, name: 스카이라이너,
          source_url: "https://www.keisei.co.jp/keisei/tetudou/skyliner/jp/skyliner/"}
 stay_areas:
-  - {label: 신주쿠, query: "Shinjuku Station"}
-  - {label: 시부야, query: "Shibuya Station"}
-  - {label: 긴자, query: "Ginza Station"}
-  - {label: 도쿄역·니혼바시, query: "Tokyo Station"}
-  - {label: 우에노, query: "Ueno Station"}
-  - {label: 아사쿠사, query: "Asakusa Station"}
-  - {label: 이케부쿠로, query: "Ikebukuro Station"}
+  - {label: 신주쿠, emoji: "🏙️", query: "Shinjuku Station", search_name: Shinjuku}
+  - {label: 시부야, emoji: "🛍️", query: "Shibuya Station", search_name: Shibuya}
+  - {label: 긴자, emoji: "💎", query: "Ginza Station", search_name: Ginza}
+  - {label: 도쿄역·니혼바시, emoji: "🚄", query: "Tokyo Station", search_name: Nihonbashi}
+  - {label: 우에노, emoji: "🐼", query: "Ueno Station", search_name: Ueno}
+  - {label: 아사쿠사, emoji: "⛩️", query: "Asakusa Station", search_name: Asakusa}
+  - {label: 이케부쿠로, emoji: "🎡", query: "Ikebukuro Station", search_name: Ikebukuro}
 # Travel-time approximation from straight-line distance. Google Routes returns no transit routes in Japan
 # (tested 2026-11-05), so every transit time here is an estimate shown as "근사".
 approx:

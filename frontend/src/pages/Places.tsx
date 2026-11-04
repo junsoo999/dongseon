@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { usePins } from '../api/hooks'
 import { AddPlaceSheet } from '../components/AddPlaceSheet'
+import { AiSuggestions } from '../components/AiSuggestions'
 import { BottomSheet } from '../components/BottomSheet'
 import { PinEditSheet } from '../components/PinEditSheet'
 import { PlacesMap } from '../components/PlacesMap'
 import { formatMinutes } from '../lib/format'
 import {
   categoryLabel,
+  CATEGORY_EMOJI,
   CATEGORY_LABELS,
   EMPTY_FILTER,
   filterPins,
@@ -22,6 +24,7 @@ import {
   type PinFilter,
 } from '../lib/places'
 import { useCurrentTrip } from '../lib/trip'
+import { MapLayout, Page } from '../components/MapLayout'
 
 const DEFAULT_CENTER = { lat: 35.681, lng: 139.767 }
 
@@ -58,7 +61,7 @@ export function Places() {
   if (trips.isPending) return <p className="text-gray-500">불러오는 중…</p>
   if (!trip) {
     return (
-      <section className="space-y-3">
+      <Page>
         <h1 className="text-xl font-bold">장소</h1>
         <p className="text-gray-600">먼저 여행을 만들어 주세요.</p>
         <Link
@@ -67,7 +70,7 @@ export function Places() {
         >
           홈에서 여행 만들기
         </Link>
-      </section>
+      </Page>
     )
   }
 
@@ -82,15 +85,13 @@ export function Places() {
       : DEFAULT_CENTER
 
   return (
-    <section className="-mx-4 -mt-5">
-      <div className="h-[42dvh] md:h-[55vh]">
-        <PlacesMap pins={shown} center={center} selectedId={editId} onSelect={setEditId} />
-      </div>
-
-      <div className="px-4 pt-4">
-        <div className="mb-3 flex items-center gap-2">
+    <>
+      <MapLayout
+        map={<PlacesMap pins={shown} center={center} selectedId={editId} onSelect={setEditId} />}
+      >
+        <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg font-bold">{trip.title}</h1>
+            <h1 className="truncate text-xl font-bold">{trip.title}</h1>
             <p className="text-sm text-gray-500">
               장소 {all.length}곳{filterCount > 0 && ` · ${shown.length}곳 표시`}
             </p>
@@ -112,10 +113,12 @@ export function Places() {
         </div>
 
         {unresolved.length > 0 && (
-          <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
             Google 장소와 연결되지 않은 곳이 {unresolved.length}곳 있습니다. 눌러서 연결하세요.
           </p>
         )}
+
+        <AiSuggestions tripId={trip.id} kind="place" />
 
         {pins.isError && <p className="text-sm text-red-700">{pins.error.message}</p>}
         {pins.isSuccess && all.length === 0 && (
@@ -125,7 +128,7 @@ export function Places() {
         )}
 
         {shown.length > 0 && (
-          <ul className="divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white">
+          <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-200 bg-white">
             {shown.map((p) => (
               <li key={p.id}>
                 <button
@@ -135,11 +138,18 @@ export function Places() {
                 >
                   <span
                     aria-hidden
-                    className="size-3 shrink-0 rounded-full"
-                    style={{
-                      background: isPriority(p.priority) ? PRIORITY_COLORS[p.priority] : '#6b7280',
-                    }}
-                  />
+                    className="relative flex size-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xl"
+                  >
+                    {CATEGORY_EMOJI[p.category] ?? '📍'}
+                    <span
+                      className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full ring-2 ring-white"
+                      style={{
+                        background: isPriority(p.priority)
+                          ? PRIORITY_COLORS[p.priority]
+                          : '#6b7280',
+                      }}
+                    />
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{p.label}</span>
                     <span className="block text-xs text-gray-500">
@@ -158,7 +168,7 @@ export function Places() {
             ))}
           </ul>
         )}
-      </div>
+      </MapLayout>
 
       <BottomSheet open={filterOpen} title="필터" onClose={() => setFilterOpen(false)}>
         <div className="space-y-4">
@@ -202,6 +212,6 @@ export function Places() {
 
       <AddPlaceSheet tripId={trip.id} open={addOpen} onClose={() => setAddOpen(false)} />
       <PinEditSheet tripId={trip.id} pin={editing} onClose={() => setEditId(null)} />
-    </section>
+    </>
   )
 }

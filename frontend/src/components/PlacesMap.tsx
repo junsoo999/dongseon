@@ -1,7 +1,7 @@
-import { AdvancedMarker, APIProvider, Map, Pin, useMap } from '@vis.gl/react-google-maps'
+import { AdvancedMarker, APIProvider, Map, useMap } from '@vis.gl/react-google-maps'
 import { useEffect } from 'react'
 import type { PinOut } from '../api/client'
-import { isPriority, PRIORITY_COLORS } from '../lib/places'
+import { CATEGORY_EMOJI, isPriority, PRIORITY_COLORS } from '../lib/places'
 
 const KEY = import.meta.env.VITE_GOOGLE_MAPS_JS_KEY
 const MAP_ID = import.meta.env.VITE_GOOGLE_MAP_ID
@@ -82,12 +82,19 @@ export function PlacesMap({
               zIndex={selected ? 10 : undefined}
               onClick={() => onSelect(p.id)}
             >
-              <Pin
-                background={color}
-                borderColor={selected ? '#111827' : '#ffffff'}
-                glyphColor="#ffffff"
-                scale={selected ? 1.3 : 1}
-              />
+              <span
+                className={`flex items-center gap-1 rounded-full bg-white py-0.5 pr-2 pl-0.5 shadow-md ring-2 ${selected ? 'ring-gray-900' : 'ring-transparent'}`}
+              >
+                <span
+                  className="flex size-6 items-center justify-center rounded-full text-sm"
+                  style={{ background: `${color}22`, boxShadow: `inset 0 0 0 2px ${color}` }}
+                >
+                  {CATEGORY_EMOJI[p.category] ?? '📍'}
+                </span>
+                <span className="max-w-24 truncate text-xs font-semibold text-gray-800">
+                  {p.label}
+                </span>
+              </span>
             </AdvancedMarker>
           )
         })}

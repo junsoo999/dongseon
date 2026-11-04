@@ -18,6 +18,8 @@ import {
   type AirportOut,
   type FlightIn,
   type FlightOut,
+  type AiSuggestionOut,
+  type SearchLinksOut,
   type SuggestionOut,
   type TripIn,
   type TripOut,
@@ -133,10 +135,6 @@ export function useResolveUrl() {
   })
 }
 
-export function useStartJob(name: 'places-resolve') {
-  return useMutation({ mutationFn: () => apiSend<JobStatus>('POST', `/jobs/${name}`) })
-}
-
 export function useStays(tripId: number | null) {
   return useQuery({
     queryKey: ['stays', tripId],
@@ -233,5 +231,55 @@ export function useDeleteFlight(tripId: number | null) {
   return useMutation({
     mutationFn: (id: number) => apiSend<void>('DELETE', `/trips/${tripId}/flights/${id}`),
     onSuccess: invalidate,
+  })
+}
+
+type JobName = 'places-resolve' | 'scout'
+
+/** A background job's state; polls every 5 s while it runs. */
+export function useJob(name: JobName) {
+  return useQuery({
+    queryKey: ['job', name],
+    queryFn: () => apiGet<JobStatus>(`/jobs/${name}`),
+    refetchInterval: (q) => (q.state.data?.running ? 5_000 : false),
+  })
+}
+
+export function useStartJob(name: JobName) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => apiSend<JobStatus>('POST', `/jobs/${name}`),
+    onSuccess: (status) => qc.setQueryData(['job', name], status),
+  })
+}
+
+export function useSuggestions(tripId: number | null, kind: 'place' | 'stay') {
+  return useQuery({
+    queryKey: ['suggestions', tripId, kind],
+    queryFn: () => apiGet<AiSuggestionOut[]>(`/trips/${tripId}/suggestions`, { kind }),
+    enabled: tripId !== null,
+  })
+}
+
+export function useDecideSuggestion(tripId: number | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, accept }: { id: number; accept: boolean }) =>
+      apiSend<unknown>('POST', `/suggestions/${id}/${accept ? 'accept' : 'reject'}`),
+    onSuccess: () => {
+      for (const key of ['suggestions', 'pins', 'stays', 'stayScore', 'trips']) {
+        void qc.invalidateQueries({ queryKey: [key, tripId] })
+      }
+      void qc.invalidateQueries({ queryKey: ['trips'] })
+    },
+  })
+}
+
+export function useSearchLinks(tripId: number | null) {
+  return useQuery({
+    queryKey: ['searchLinks', tripId],
+    queryFn: () => apiGet<SearchLinksOut>(`/trips/${tripId}/search-links`),
+    enabled: tripId !== null,
+    staleTime: 10 * 60_000,
   })
 }

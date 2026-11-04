@@ -4,6 +4,7 @@ import { useCities, useCreateTrip } from '../api/hooks'
 import { BottomSheet } from '../components/BottomSheet'
 import { dDay } from '../lib/format'
 import { todayIso, useCurrentTrip } from '../lib/trip'
+import { Page } from '../components/MapLayout'
 
 const inputClass = 'min-h-11 w-full rounded-lg border border-gray-300 px-3 text-base'
 
@@ -94,7 +95,7 @@ export function Home() {
   const list = trips.data ?? []
 
   return (
-    <section className="space-y-5">
+    <Page>
       <div className="flex items-center gap-3">
         <img src="/icon.svg" alt="" className="size-10 rounded-xl" />
         <div className="flex-1">
@@ -163,6 +164,6 @@ export function Home() {
           }}
         />
       </BottomSheet>
-    </section>
+    </Page>
   )
 }

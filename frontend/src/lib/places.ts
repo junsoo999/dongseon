@@ -11,6 +11,17 @@ export const CATEGORY_LABELS: Record<string, string> = {
   other: '기타',
 }
 
+export const CATEGORY_EMOJI: Record<string, string> = {
+  food: '🍽️',
+  cafe: '☕',
+  bar: '🍶',
+  sight: '📸',
+  museum: '🏛️',
+  shopping: '🛍️',
+  experience: '🎟️',
+  other: '📍',
+}
+
 export const PRIORITIES = ['must', 'want', 'maybe'] as const
 export type Priority = (typeof PRIORITIES)[number]
 
