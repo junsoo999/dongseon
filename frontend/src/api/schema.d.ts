@@ -308,6 +308,74 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/airports': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Airports
+     * @description List airports usable in flight legs.
+     */
+    get: operations['airports_api_airports_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/flights': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List Flights
+     * @description List flight options with their usable local time.
+     */
+    get: operations['list_flights_api_trips__trip_id__flights_get']
+    put?: never
+    /**
+     * Create Flight
+     * @description Add a flight option.
+     */
+    post: operations['create_flight_api_trips__trip_id__flights_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/flights/{flight_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Replace Flight
+     * @description Replace a flight option and its legs.
+     */
+    put: operations['replace_flight_api_trips__trip_id__flights__flight_id__put']
+    post?: never
+    /**
+     * Delete Flight
+     * @description Remove a flight option.
+     */
+    delete: operations['delete_flight_api_trips__trip_id__flights__flight_id__delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/jobs/{name}': {
     parameters: {
       query?: never
@@ -337,6 +405,18 @@ export type webhooks = Record<string, never>
 export interface components {
   schemas: {
     /**
+     * AirportOut
+     * @description An airport for the leg form.
+     */
+    AirportOut: {
+      /** Code */
+      code: string
+      /** Name */
+      name: string
+      /** Timezone */
+      timezone: string
+    }
+    /**
      * CategoryOut
      * @description An app category and its default dwell minutes.
      */
@@ -361,6 +441,103 @@ export interface components {
       timezone: string
       /** Currency */
       currency: string
+    }
+    /**
+     * EvaluationOut
+     * @description Usable time at the destination. Airport↔stay minutes are approximations ("근사").
+     */
+    EvaluationOut: {
+      /** Arrival Airport */
+      arrival_airport: string
+      /** Arrival Local */
+      arrival_local: string
+      /** Ready Local */
+      ready_local: string | null
+      /** Departure Airport */
+      departure_airport: string
+      /** Departure Local */
+      departure_local: string
+      /** Leave By Local */
+      leave_by_local: string | null
+      /** Access In Min */
+      access_in_min: number | null
+      /** Access Out Min */
+      access_out_min: number | null
+      /** Immigration Buffer Min */
+      immigration_buffer_min: number
+      /** Departure Buffer Min */
+      departure_buffer_min: number
+      /** Usable Min */
+      usable_min: number | null
+      /** Reference Label */
+      reference_label: string | null
+      /**
+       * Reference Kind
+       * @enum {string}
+       */
+      reference_kind: 'booked_stay' | 'top_area' | 'none'
+      /** Total Krw */
+      total_krw: number | null
+      /** Krw Per Usable Hour */
+      krw_per_usable_hour: number | null
+      /** Warnings */
+      warnings: string[]
+    }
+    /**
+     * FlightIn
+     * @description A round-trip option.
+     */
+    FlightIn: {
+      /** Label */
+      label: string
+      /** Total Amount */
+      total_amount?: number | null
+      /**
+       * Currency
+       * @default KRW
+       */
+      currency: string
+      /** Baggage Note */
+      baggage_note?: string | null
+      /** Booking Url */
+      booking_url?: string | null
+      /** Note */
+      note?: string | null
+      /**
+       * Status
+       * @default candidate
+       * @enum {string}
+       */
+      status: 'candidate' | 'booked'
+      /** Legs */
+      legs: components['schemas']['LegIn'][]
+    }
+    /**
+     * FlightOut
+     * @description A flight option with its legs, problems and evaluation.
+     */
+    FlightOut: {
+      /** Id */
+      id: number
+      /** Label */
+      label: string
+      /** Total Amount */
+      total_amount: number | null
+      /** Currency */
+      currency: string
+      /** Baggage Note */
+      baggage_note: string | null
+      /** Booking Url */
+      booking_url: string | null
+      /** Note */
+      note: string | null
+      /** Status */
+      status: string
+      /** Legs */
+      legs: components['schemas']['LegOut'][]
+      /** Problems */
+      problems: string[]
+      evaluation: components['schemas']['EvaluationOut'] | null
     }
     /**
      * FxOut
@@ -423,6 +600,61 @@ export interface components {
       last_rows: number | null
       /** Last Error */
       last_error: string | null
+    }
+    /**
+     * LegIn
+     * @description A leg with times in each airport's local time (``YYYY-MM-DDTHH:MM``).
+     */
+    LegIn: {
+      /**
+       * Direction
+       * @enum {string}
+       */
+      direction: 'out' | 'back'
+      /** Carrier */
+      carrier?: string | null
+      /** Flight No */
+      flight_no?: string | null
+      /** Dep Airport */
+      dep_airport: string
+      /**
+       * Dep Local
+       * Format: date-time
+       */
+      dep_local: string
+      /** Arr Airport */
+      arr_airport: string
+      /**
+       * Arr Local
+       * Format: date-time
+       */
+      arr_local: string
+    }
+    /**
+     * LegOut
+     * @description A leg with local times and the airports' timezones.
+     */
+    LegOut: {
+      /** Direction */
+      direction: string
+      /** Carrier */
+      carrier: string | null
+      /** Flight No */
+      flight_no: string | null
+      /** Dep Airport */
+      dep_airport: string
+      /** Dep Local */
+      dep_local: string
+      /** Dep Timezone */
+      dep_timezone: string
+      /** Arr Airport */
+      arr_airport: string
+      /** Arr Local */
+      arr_local: string
+      /** Arr Timezone */
+      arr_timezone: string
+      /** Duration Min */
+      duration_min: number
     }
     /**
      * OriginOut
@@ -1433,6 +1665,158 @@ export interface operations {
         content: {
           'application/json': components['schemas']['ScoreOut']
         }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  airports_api_airports_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AirportOut'][]
+        }
+      }
+    }
+  }
+  list_flights_api_trips__trip_id__flights_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FlightOut'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_flight_api_trips__trip_id__flights_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FlightIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FlightOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  replace_flight_api_trips__trip_id__flights__flight_id__put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+        flight_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FlightIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FlightOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_flight_api_trips__trip_id__flights__flight_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+        flight_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Validation Error */
       422: {

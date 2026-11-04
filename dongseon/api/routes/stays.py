@@ -3,6 +3,7 @@
 from datetime import UTC, date, datetime
 from typing import Literal
 
+import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.orm import Session
@@ -11,10 +12,12 @@ from dongseon.api.deps import DefaultsDep, HttpDep, ProfileDep, SessionDep, Sett
 from dongseon.api.routes.places import OptionalPlacesDep
 from dongseon.api.routes.trips import get_trip_or_404
 from dongseon.core.cities import CityNotFoundError, load_city
+from dongseon.core.config import Settings
+from dongseon.core.profile import Profile
 from dongseon.db.models import GeoCache, Place, Stay, Trip
 from dongseon.places.service import coords_for, get_or_create_place, store_geo
 from dongseon.sources.fx import SOURCE_LABEL, Rate, get_rate
-from dongseon.sources.google_places import LatLng, PlaceNotFoundError
+from dongseon.sources.google_places import GooglePlacesClient, LatLng, PlaceNotFoundError
 from dongseon.stays.areas import ensure_area_places
 from dongseon.stays.score import AirportAccess, Target, score_origin
 
@@ -165,7 +168,7 @@ def _stays(session: Session, trip: Trip) -> list[Stay]:
     return sorted(session.query(Stay).filter(Stay.trip_id == trip.id).all(), key=lambda s: s.id)
 
 
-def _rates(session: Session, http: HttpDep | None, stays: list[Stay]) -> dict[str, Rate | None]:
+def _rates(session: Session, http: httpx.Client | None, stays: list[Stay]) -> dict[str, Rate | None]:
     return {c: get_rate(session, http, c) for c in {s.currency for s in stays}}
 
 
@@ -275,7 +278,18 @@ def score(
     client: OptionalPlacesDep,
 ) -> ScoreOut:
     """Rank configured neighborhoods and stay candidates by approximate travel time to must/want pins."""
-    trip = get_trip_or_404(session, trip_id)
+    return build_score(get_trip_or_404(session, trip_id), session, settings, profile, http, client)
+
+
+def build_score(
+    trip: Trip,
+    session: Session,
+    settings: Settings,
+    profile: Profile,
+    http: httpx.Client | None,
+    client: GooglePlacesClient | None,
+) -> ScoreOut:
+    """Score a trip's areas and stays (shared by the stays screen and flight evaluation)."""
     try:
         city = load_city(settings.cities_path, trip.city_key)
     except CityNotFoundError as e:

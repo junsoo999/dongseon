@@ -39,3 +39,25 @@ export function formatKrw(amount: number): string {
   if (!Number.isFinite(amount)) return '-'
   return `₩${Math.round(amount).toLocaleString('ko-KR')}`
 }
+
+/** Long durations with days, e.g. 5875 -> "4일 1시간 55분"; falls back to formatMinutes under a day. */
+export function formatSpan(min: number): string {
+  if (!Number.isFinite(min)) return '-'
+  const m = Math.round(min)
+  if (Math.abs(m) < 24 * 60) return formatMinutes(m)
+  const days = Math.floor(m / (24 * 60))
+  const rest = m - days * 24 * 60
+  return rest === 0 ? `${days}일` : `${days}일 ${formatMinutes(rest)}`
+}
+
+/** "2030-12-28T09:05" -> "12/28 09:05" (already local; no timezone math). */
+export function formatLocal(isoLocal: string): string {
+  const [date, time] = isoLocal.split('T')
+  const [, mm, dd] = date.split('-')
+  return `${Number(mm)}/${Number(dd)} ${time?.slice(0, 5) ?? ''}`.trim()
+}
+
+/** Minutes between two local ISO strings of the same zone. */
+export function minutesBetween(a: string, b: string): number {
+  return Math.round((Date.parse(`${b}:00Z`) - Date.parse(`${a}:00Z`)) / 60_000)
+}

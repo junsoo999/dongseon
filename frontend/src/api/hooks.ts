@@ -15,6 +15,9 @@ import {
   type StayOut,
   type StayPatch,
   type FxOut,
+  type AirportOut,
+  type FlightIn,
+  type FlightOut,
   type SuggestionOut,
   type TripIn,
   type TripOut,
@@ -189,6 +192,46 @@ export function useDeleteStay(tripId: number | null) {
   const invalidate = useInvalidateStays(tripId)
   return useMutation({
     mutationFn: (id: number) => apiSend<void>('DELETE', `/trips/${tripId}/stays/${id}`),
+    onSuccess: invalidate,
+  })
+}
+
+export function useAirports() {
+  return useQuery({
+    queryKey: ['airports'],
+    queryFn: () => apiGet<AirportOut[]>('/airports'),
+    staleTime: Infinity,
+  })
+}
+
+export function useFlights(tripId: number | null) {
+  return useQuery({
+    queryKey: ['flights', tripId],
+    queryFn: () => apiGet<FlightOut[]>(`/trips/${tripId}/flights`),
+    enabled: tripId !== null,
+  })
+}
+
+function useInvalidateFlights(tripId: number | null) {
+  const qc = useQueryClient()
+  return () => void qc.invalidateQueries({ queryKey: ['flights', tripId] })
+}
+
+export function useSaveFlight(tripId: number | null) {
+  const invalidate = useInvalidateFlights(tripId)
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number | null; body: FlightIn }) =>
+      id === null
+        ? apiSend<FlightOut>('POST', `/trips/${tripId}/flights`, body)
+        : apiSend<FlightOut>('PUT', `/trips/${tripId}/flights/${id}`, body),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDeleteFlight(tripId: number | null) {
+  const invalidate = useInvalidateFlights(tripId)
+  return useMutation({
+    mutationFn: (id: number) => apiSend<void>('DELETE', `/trips/${tripId}/flights/${id}`),
     onSuccess: invalidate,
   })
 }

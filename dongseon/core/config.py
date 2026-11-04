@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     profile_path: str = "config/profile.yaml"
     defaults_path: str = "config/defaults.yaml"
     cities_dir: str = "config/cities"
+    airports_path: str = "config/airports.yaml"
     lock_dir: str = "data/locks"
 
     google_maps_server_key: str = ""
@@ -82,6 +83,11 @@ class Settings(BaseSettings):
     def cities_path(self) -> Path:
         """Absolute directory holding per-city YAML files."""
         return resolve_repo_path(self.cities_dir)
+
+    @property
+    def airports_file(self) -> Path:
+        """Absolute path of the airport list."""
+        return resolve_repo_path(self.airports_path)
 
     @property
     def configured_keys(self) -> dict[str, bool]:

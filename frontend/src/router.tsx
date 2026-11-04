@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router'
 import { Layout } from './components/Layout'
+import { Flights } from './pages/Flights'
 import { Home } from './pages/Home'
 import { More } from './pages/More'
 import { Placeholder } from './pages/Placeholder'
@@ -15,7 +16,7 @@ export const routes = [
       { index: true, element: <Home /> },
       { path: 'places', element: <Places /> },
       { path: 'stays', element: <Stays /> },
-      { path: 'flights', element: <Placeholder title="항공" milestone="M2" /> },
+      { path: 'flights', element: <Flights /> },
       { path: 'itinerary', element: <Placeholder title="일정" milestone="M3" /> },
       { path: 'today', element: <Placeholder title="오늘" milestone="M5" /> },
       { path: 'prep', element: <Placeholder title="준비" milestone="M5" /> },
