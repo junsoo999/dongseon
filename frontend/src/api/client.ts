@@ -37,6 +37,10 @@ export type VacancyOut = S['VacancyOut']
 export type HistoryPoint = S['HistoryPoint']
 export type FarePrefsIO = S['FarePrefsIO']
 export type FarePrefsOut = S['FarePrefsOut']
+export type ItineraryOut = S['ItineraryOut']
+export type DayOut = S['DayOut']
+export type ItemOut = S['ItemOut']
+export type VersionOut = S['VersionOut']
 
 export class ApiError extends Error {
   readonly status: number

@@ -580,6 +580,86 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/trips/{trip_id}/itineraries/solve': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Solve Itinerary
+     * @description Make a new draft from the trip's pins, stays, flight and opening hours.
+     */
+    post: operations['solve_itinerary_api_trips__trip_id__itineraries_solve_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/itineraries/active': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Active Itinerary
+     * @description The current version, or null before the first draft.
+     */
+    get: operations['active_itinerary_api_trips__trip_id__itineraries_active_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/itineraries': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List Versions
+     * @description Every version, newest first.
+     */
+    get: operations['list_versions_api_trips__trip_id__itineraries_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/itineraries/{itinerary_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Itinerary
+     * @description One version by id.
+     */
+    get: operations['get_itinerary_api_itineraries__itinerary_id__get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/jobs/{name}': {
     parameters: {
       query?: never
@@ -731,6 +811,45 @@ export interface components {
       timezone: string
       /** Currency */
       currency: string
+    }
+    /**
+     * DayOut
+     * @description One day of the plan.
+     */
+    DayOut: {
+      /**
+       * Date
+       * Format: date
+       */
+      date: string
+      /** Start */
+      start: string
+      /** End */
+      end: string
+      /** Depot */
+      depot: string
+      /** Back At */
+      back_at: string | null
+      /** Back Move Min */
+      back_move_min: number | null
+      /** Warnings */
+      warnings: string[]
+      /** Items */
+      items: components['schemas']['ItemOut'][]
+    }
+    /**
+     * DroppedOut
+     * @description A pin the solver left out, and why.
+     */
+    DroppedOut: {
+      /** Pin Id */
+      pin_id: number
+      /** Label */
+      label: string
+      /** Priority */
+      priority: string
+      /** Reason */
+      reason: string
     }
     /**
      * EvaluationOut
@@ -1049,6 +1168,67 @@ export interface components {
       credit_url: string
       /** Areas */
       areas: components['schemas']['AreaVacanciesOut'][]
+    }
+    /**
+     * ItemOut
+     * @description A planned visit. Times are estimates; ``hours`` names the opening-hours source.
+     */
+    ItemOut: {
+      /** Id */
+      id: number
+      /** Pin Id */
+      pin_id: number | null
+      /** Label */
+      label: string
+      /** Kind */
+      kind: string
+      /** Category */
+      category: string | null
+      /** Priority */
+      priority: string | null
+      /** Google Place Id */
+      google_place_id: string | null
+      /** Lat */
+      lat: number | null
+      /** Lng */
+      lng: number | null
+      /** Start */
+      start: string
+      /** End */
+      end: string
+      /** Move Min */
+      move_min: number | null
+      /** Move Mode */
+      move_mode: string | null
+      /** Hours */
+      hours: string | null
+      /** Warnings */
+      warnings: string[]
+    }
+    /**
+     * ItineraryOut
+     * @description An itinerary version.
+     */
+    ItineraryOut: {
+      /** Id */
+      id: number
+      /** Version */
+      version: number
+      /** Origin */
+      origin: string
+      /** Status */
+      status: string
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Approx */
+      approx: boolean
+      /** Days */
+      days: components['schemas']['DayOut'][]
+      /** Dropped */
+      dropped: components['schemas']['DroppedOut'][]
     }
     /**
      * JobStatus
@@ -1674,6 +1854,27 @@ export interface components {
       input?: unknown
       /** Context */
       ctx?: Record<string, never>
+    }
+    /**
+     * VersionOut
+     * @description A version in the history.
+     */
+    VersionOut: {
+      /** Id */
+      id: number
+      /** Version */
+      version: number
+      /** Origin */
+      origin: string
+      /** Status */
+      status: string
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Visits */
+      visits: number
     }
   }
   responses: never
@@ -2763,6 +2964,130 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['FarePrefsOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  solve_itinerary_api_trips__trip_id__itineraries_solve_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ItineraryOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  active_itinerary_api_trips__trip_id__itineraries_active_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ItineraryOut'] | null
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  list_versions_api_trips__trip_id__itineraries_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['VersionOut'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_itinerary_api_itineraries__itinerary_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        itinerary_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ItineraryOut']
         }
       }
       /** @description Validation Error */

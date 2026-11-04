@@ -24,6 +24,8 @@ import {
   type HotelsOut,
   type FarePrefsIO,
   type FarePrefsOut,
+  type ItineraryOut,
+  type VersionOut,
   type SuggestionOut,
   type TripIn,
   type TripOut,
@@ -329,5 +331,33 @@ export function useSaveFarePrefs(tripId: number | null) {
     mutationFn: (body: FarePrefsIO) =>
       apiSend<FarePrefsOut>('PUT', `/trips/${tripId}/fare-prefs`, body),
     onSuccess: (data) => qc.setQueryData(['farePrefs', tripId], data),
+  })
+}
+
+export function useActiveItinerary(tripId: number | null) {
+  return useQuery({
+    queryKey: ['itinerary', tripId],
+    queryFn: () => apiGet<ItineraryOut | null>(`/trips/${tripId}/itineraries/active`),
+    enabled: tripId !== null,
+  })
+}
+
+export function useItineraryVersions(tripId: number | null) {
+  return useQuery({
+    queryKey: ['itineraryVersions', tripId],
+    queryFn: () => apiGet<VersionOut[]>(`/trips/${tripId}/itineraries`),
+    enabled: tripId !== null,
+  })
+}
+
+export function useSolveItinerary(tripId: number | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => apiSend<ItineraryOut>('POST', `/trips/${tripId}/itineraries/solve`),
+    onSuccess: (data) => {
+      qc.setQueryData(['itinerary', tripId], data)
+      void qc.invalidateQueries({ queryKey: ['itineraryVersions', tripId] })
+      void qc.invalidateQueries({ queryKey: ['usage'] })
+    },
   })
 }

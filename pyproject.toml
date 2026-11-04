@@ -16,6 +16,7 @@ dependencies = [
     "sqlalchemy>=2.0",
     "alembic>=1.14",
     "pyyaml>=6.0",
+    "ortools>=9.15.6755",
 ]
 
 [project.scripts]
@@ -128,4 +129,6 @@ filterwarnings = [
     "error",
     # Starlette recommends `httpx2` for TestClient; not adopted (unverified package).
     "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+    # OR-Tools' SWIG bindings warn while importing; turning that into an error crashes the extension module.
+    "ignore:builtin type .* has no __module__ attribute:DeprecationWarning",
 ]

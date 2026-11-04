@@ -1,0 +1,115 @@
+{
+  "id": "ChIJEX3XFIOOGGAR3XdJvRjWLyM",
+  "regularOpeningHours": {
+    "openNow": false,
+    "periods": [
+      {
+        "open": {
+          "day": 0,
+          "hour": 10,
+          "minute": 0
+        },
+        "close": {
+          "day": 0,
+          "hour": 18,
+          "minute": 0
+        }
+      },
+      {
+        "open": {
+          "day": 2,
+          "hour": 10,
+          "minute": 0
+        },
+        "close": {
+          "day": 2,
+          "hour": 18,
+          "minute": 0
+        }
+      },
+      {
+        "open": {
+          "day": 3,
+          "hour": 10,
+          "minute": 0
+        },
+        "close": {
+          "day": 3,
+          "hour": 18,
+          "minute": 0
+        }
+      },
+      {
+        "open": {
+          "day": 4,
+          "hour": 10,
+          "minute": 0
+        },
+        "close": {
+          "day": 4,
+          "hour": 18,
+          "minute": 0
+        }
+      },
+      {
+        "open": {
+          "day": 5,
+          "hour": 10,
+          "minute": 0
+        },
+        "close": {
+          "day": 5,
+          "hour": 18,
+          "minute": 0
+        }
+      },
+      {
+        "open": {
+          "day": 6,
+          "hour": 10,
+          "minute": 0
+        },
+        "close": {
+          "day": 6,
+          "hour": 18,
+          "minute": 0
+        }
+      }
+    ],
+    "weekdayDescriptions": [
+      "월요일: 휴무일",
+      "화요일: 오전 10:00~오후 6:00"
+    ],
+    "nextOpenTime": "2030-12-27T01:00:00Z"
+  },
+  "utcOffsetMinutes": 540,
+  "currentOpeningHours": {
+    "openNow": false,
+    "periods": [
+      {
+        "open": {
+          "day": 5,
+          "hour": 10,
+          "minute": 0,
+          "date": {
+            "year": 2030,
+            "month": 12,
+            "day": 27
+          }
+        },
+        "close": {
+          "day": 5,
+          "hour": 15,
+          "minute": 0,
+          "date": {
+            "year": 2030,
+            "month": 12,
+            "day": 27
+          }
+        }
+      }
+    ],
+    "weekdayDescriptions": [],
+    "nextOpenTime": "2030-12-27T01:00:00Z"
+  }
+}
