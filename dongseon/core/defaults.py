@@ -1,0 +1,46 @@
+"""Shared, non-personal defaults (``config/defaults.yaml``): free-tier caps, categories, dwell times."""
+
+from datetime import date
+from pathlib import Path
+
+import yaml
+from pydantic import BaseModel, Field
+
+
+class FreeTier(BaseModel):
+    """Monthly free call caps per Google SKU, as published by Google on ``as_of``.
+
+    A ``None`` cap means the SKU has no free-tier cap (e.g. Text Search IDs Only); it is counted but never blocked.
+    """
+
+    as_of: date
+    source_url: str
+    billing_timezone: str
+    monthly_free: dict[str, int | None]
+
+
+class Categories(BaseModel):
+    """Google ``primaryType`` to app category mapping and default dwell minutes per category."""
+
+    mapping: dict[str, str] = Field(default_factory=dict)
+    fallback: str = "other"
+    dwell_min: dict[str, int] = Field(default_factory=dict)
+
+
+class Defaults(BaseModel):
+    """The parsed defaults file."""
+
+    google_free_tier: FreeTier
+    categories: Categories = Field(default_factory=Categories)
+
+
+def load_defaults(path: Path) -> Defaults:
+    """Parse and validate ``config/defaults.yaml``.
+
+    Args:
+        path: Defaults file path.
+
+    Returns:
+        The validated defaults.
+    """
+    return Defaults.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")) or {})

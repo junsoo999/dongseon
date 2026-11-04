@@ -1,0 +1,11 @@
+@import 'tailwindcss';
+
+:root {
+  font-family:
+    Pretendard,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Apple SD Gothic Neo',
+    'Noto Sans KR',
+    sans-serif;
+}

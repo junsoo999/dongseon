@@ -1,0 +1,79 @@
+default_stages:
+  - pre-commit
+  - manual
+
+repos:
+  # Python: use the uv-managed tool versions so local runs, hooks, and CI agree.
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --no-sync ruff format
+        language: system
+        types: [python]
+      - id: ruff
+        name: ruff check
+        entry: uv run --no-sync ruff check --fix
+        language: system
+        types: [python]
+      - id: pyright
+        name: pyright
+        entry: uv run --no-sync pyright
+        language: system
+        types: [python]
+        pass_filenames: false
+
+  # Frontend: run the project's own toolchain via pnpm.
+  - repo: local
+    hooks:
+      - id: frontend-prettier
+        name: prettier (frontend)
+        entry: pnpm --dir frontend exec prettier --check src
+        language: system
+        files: ^frontend/src/
+        pass_filenames: false
+      - id: frontend-oxlint
+        name: oxlint (frontend)
+        entry: pnpm --dir frontend lint
+        language: system
+        files: ^frontend/src/
+        pass_filenames: false
+      - id: frontend-typecheck
+        name: tsc (frontend)
+        entry: pnpm --dir frontend typecheck
+        language: system
+        files: ^frontend/(src/|tsconfig|vite\.config)
+        pass_filenames: false
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^tests/unit_test/fixtures/  # keep captured API responses byte-for-byte
+      - id: end-of-file-fixer
+        exclude: ^tests/unit_test/fixtures/
+      - id: check-yaml
+        # pnpm 12 writes the lockfile as a multi-document YAML stream
+        exclude: ^frontend/pnpm-lock\.yaml$
+      - id: check-added-large-files
+      - id: detect-private-key
+
+  - repo: https://github.com/openstack/bashate
+    rev: 2.1.1
+    hooks:
+      - id: bashate
+        name: bashate
+        description: This hook runs bashate for linting shell scripts
+        entry: bashate
+        language: python
+        types: [shell]
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.7
+    hooks:
+      - id: actionlint
+
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.45.0
+    hooks:
+      - id: markdownlint

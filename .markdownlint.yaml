@@ -1,0 +1,16 @@
+# markdownlint configuration
+# See: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+default: true
+
+# Allow long lines: Korean text and URLs make the 80-col limit impractical.
+MD013: false
+
+# Allow inline HTML.
+MD033: false
+
+# Do not require the first line to be a top-level heading (PR template starts with H2).
+MD041: false
+
+# Allow both 2-space and 4-space list indentation.
+MD007: false
