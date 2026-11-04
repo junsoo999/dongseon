@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import type { OriginOut, StayOut } from '../api/client'
 import { usePins, useStays, useStayScore } from '../api/hooks'
 import { AiSuggestions } from '../components/AiSuggestions'
+import { LiveHotels } from '../components/LivePrices'
 import { StaySearchLinks } from '../components/SearchLinks'
 import { StaySheet } from '../components/StaySheet'
 import { StaysMap } from '../components/StaysMap'
@@ -192,6 +193,7 @@ export function Stays() {
           </ul>
         )}
 
+        <LiveHotels tripId={trip.id} />
         <StaySearchLinks tripId={trip.id} />
         <AiSuggestions tripId={trip.id} kind="stay" />
 

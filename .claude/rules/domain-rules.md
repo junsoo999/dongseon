@@ -69,6 +69,16 @@ alwaysApply: true
   2026-07-17), hotel partner APIs, Tabelog, Naver blogs and booking-site screens (deep links only).
 - Record units of work in `job_log` so jobs resume; retry only transient errors (5xx, timeout) with exponential backoff, max 3.
 
+## Flight and hotel prices
+
+- Ignav (`dongseon/sources/ignav.py`): terms (effective 2026-10-01) allow keeping and analyzing returned flight
+  data; no attribution. One credit per successful request: search each home airport × city airport once a day,
+  fetch booking links only when the user adds a fare.
+- Rakuten Travel (`dongseon/sources/rakuten.py`): send the registered site URL as both `Referer` and `Origin`
+  (`RAKUTEN_REFERER`, personal, `.env` only), at most about one request per second, and show
+  "Supported by Rakuten Developers". The API reports only the first night's rate, so totals are labeled estimates.
+- Hotel searches use the stay areas' station coordinates from the city config, never Google coordinates.
+
 ## LLM
 
 - Headless Claude Code (`claude -p`, `--json-schema`) on the user's subscription, ported from jipsa's `claude_cli.py`.

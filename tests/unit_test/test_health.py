@@ -22,7 +22,7 @@ def test_health_ok() -> None:
     body = resp.json()
     assert body["status"] == "ok"
     assert body["version"] == __version__
-    assert set(body["keys"]) == {"google_maps_server", "google_maps_js", "google_map_id"}
+    assert set(body["keys"]) >= {"google_maps_server", "google_maps_js", "google_map_id", "ignav", "rakuten"}
     assert all(isinstance(v, bool) for v in body["keys"].values())
 
 

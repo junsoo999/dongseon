@@ -33,6 +33,8 @@ class StayArea(BaseModel):
     query: str
     search_name: str | None = None  # English area name for booking-site search links
     emoji: str | None = None  # shown on map markers and lists
+    lat: float | None = None  # main station, from public sources (not Google), for hotel searches
+    lng: float | None = None
 
 
 class HolidayPeriod(BaseModel):

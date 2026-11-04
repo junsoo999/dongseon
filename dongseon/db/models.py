@@ -238,3 +238,63 @@ class AiSuggestion(Base):
     prompt_version: Mapped[str]
     input_hash: Mapped[str]
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), index=True)
+
+
+class FareOffer(Base):
+    """A round-trip fare from the latest Ignav search for a trip and route (replaced on each refresh)."""
+
+    __tablename__ = "fare_offers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), index=True)
+    route: Mapped[str]  # e.g. "ICN-NRT"
+    ignav_id: Mapped[str]
+    amount: Mapped[int]  # all travelers
+    currency: Mapped[str] = mapped_column(String(3))
+    out_carrier: Mapped[str | None]
+    in_carrier: Mapped[str | None]
+    legs_json: Mapped[str]  # [{direction, carrier_code, flight_number, dep_airport, dep_at, arr_airport, arr_at}]
+    fetched_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class HotelVacancy(Base):
+    """A hotel with vacancies from the latest Rakuten Travel search around a stay area (replaced on refresh)."""
+
+    __tablename__ = "hotel_vacancies"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), index=True)
+    area: Mapped[str]
+    hotel_no: Mapped[int]
+    name: Mapped[str]
+    lat: Mapped[float]  # Rakuten's coordinates
+    lng: Mapped[float]
+    nearest_station: Mapped[str | None]
+    access: Mapped[str | None]
+    review_average: Mapped[float | None]
+    review_count: Mapped[int | None]
+    thumbnail_url: Mapped[str | None]
+    info_url: Mapped[str | None]
+    plan_name: Mapped[str | None]
+    room_name: Mapped[str | None]
+    first_night_total: Mapped[int | None]  # JPY, all guests
+    reserve_url: Mapped[str | None]
+    bath_hint: Mapped[bool]
+    check_in: Mapped[date] = mapped_column(Date)
+    check_out: Mapped[date] = mapped_column(Date)
+    fetched_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class PriceSnapshot(Base):
+    """The lowest price seen per day for a trip's route or area, for trends."""
+
+    __tablename__ = "price_snapshots"
+    __table_args__ = (UniqueConstraint("trip_id", "kind", "key", "day", name="uq_price_snapshots_key_day"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str]  # flight | hotel
+    key: Mapped[str]  # route ("ICN-NRT") or area label
+    day: Mapped[date] = mapped_column(Date)
+    min_amount: Mapped[int]
+    currency: Mapped[str] = mapped_column(String(3))

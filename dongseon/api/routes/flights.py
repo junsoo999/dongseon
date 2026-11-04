@@ -21,7 +21,7 @@ from dongseon.sources.fx import get_rate
 router = APIRouter(tags=["flights"])
 
 LOCAL_FMT = "%Y-%m-%dT%H:%M"
-RefKind = Literal["booked_stay", "top_area", "none"]
+RefKind = Literal["booked_stay", "top_area", "first_area", "none"]
 Reference = tuple[str | None, RefKind, dict[str, int]]
 
 
@@ -123,7 +123,10 @@ def _local(at: datetime, tz: ZoneInfo) -> str:
 
 
 def _reference(session: Session, trip: Trip, score: ScoreOut | None) -> Reference:
-    """Pick the stay to measure airport access from: the booked stay, else the top-ranked origin."""
+    """Pick the stay to measure airport access from: the booked stay, the top-ranked origin, else the first area.
+
+    The first configured area is a stand-in while no must/want pins exist to rank areas.
+    """
     if score is None:
         return None, "none", {}
     booked = {
@@ -136,6 +139,9 @@ def _reference(session: Session, trip: Trip, score: ScoreOut | None) -> Referenc
     for o in score.origins:
         if o.rank is not None and o.airport_min:
             return o.label, "top_area", o.airport_min
+    for o in score.origins:
+        if o.kind == "area" and o.airport_min:
+            return o.label, "first_area", o.airport_min
     return None, "none", {}
 
 

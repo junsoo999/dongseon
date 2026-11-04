@@ -309,3 +309,106 @@ def scout(
     _log_job(engine, "scout", status, rows, error)
     if status != "ok":
         raise typer.Exit(EXIT_SYSTEM_ERROR)
+
+
+@app.command(help="실시간 가격을 가져옵니다: Ignav 항공 운임과 楽天トラベル 빈방 (끝나지 않은 여행).")
+def prices(
+    trip: Annotated[int | None, typer.Option("--trip", help="이 여행만")] = None,
+    max_stops: Annotated[int, typer.Option("--max-stops", help="경유 횟수 상한 (0 = 직항)")] = 0,
+) -> None:
+    """Refresh fares and hotel vacancies for upcoming trips (one run at a time)."""
+    from dongseon.core.profile import load_profile
+    from dongseon.prices import refresh_prices
+    from dongseon.sources.ignav import IgnavClient
+    from dongseon.sources.rakuten import RakutenClient
+
+    settings = get_settings()
+    has_rakuten = bool(settings.rakuten_app_id and settings.rakuten_access_key and settings.rakuten_referer)
+    if not settings.ignav_api_key and not has_rakuten:
+        raise _fail("IGNAV_API_KEY나 RAKUTEN_APP_ID/RAKUTEN_ACCESS_KEY/RAKUTEN_REFERER가 .env에 없습니다")
+    upgrade_schema(settings.database_file)
+    engine = get_engine(settings.database_file)
+    defaults = load_defaults(settings.defaults_file)
+    profile_path = (
+        settings.profile_file if settings.profile_file.exists() else REPO_ROOT / "config/profile.example.yaml"
+    )
+    profile = load_profile(profile_path)
+    status, errors, rows = "ok", [], 0
+    try:
+        with job_lock(settings.lock_path, "prices"), httpx.Client(timeout=30.0) as http:
+            ignav = IgnavClient(http, settings.ignav_api_key) if settings.ignav_api_key else None
+            rakuten = (
+                RakutenClient(
+                    http,
+                    app_id=settings.rakuten_app_id,
+                    access_key=settings.rakuten_access_key,
+                    referer=settings.rakuten_referer,
+                )
+                if has_rakuten
+                else None
+            )
+            with session_scope(engine) as session:
+                today = datetime.now(UTC).date()
+                stmt = (
+                    select(Trip).where(Trip.end_date >= today) if trip is None else select(Trip).where(Trip.id == trip)
+                )
+                trip_ids = [t.id for t in session.scalars(stmt)]
+            for t_id in trip_ids:
+                with session_scope(engine) as session:
+                    t = session.get(Trip, t_id)
+                    assert t is not None
+                    places = None
+                    if settings.google_maps_server_key:
+                        meter = make_meter(
+                            session,
+                            defaults.google_free_tier,
+                            warn_ratio=settings.google_free_tier_warn_ratio,
+                            stop_ratio=settings.google_free_tier_stop_ratio,
+                        )
+                        places = GooglePlacesClient(http, settings.google_maps_server_key, meter)
+                    summary = refresh_prices(
+                        session,
+                        trip=t,
+                        city=load_city(settings.cities_path, t.city_key),
+                        profile=profile,
+                        settings=settings,
+                        http=http,
+                        places=places,
+                        ignav=ignav,
+                        rakuten=rakuten,
+                        max_stops=max_stops,
+                    )
+                rows += sum(summary.fares.values()) + sum(summary.hotels.values())
+                fares = ", ".join(f"{k} {v}건" for k, v in summary.fares.items()) or "없음"
+                hotels = ", ".join(f"{k} {v}곳" for k, v in summary.hotels.items()) or "없음"
+                typer.echo(f"#{t_id} 항공 운임: {fares} · 빈방: {hotels}")
+                for e in summary.errors:
+                    typer.echo(f"#{t_id} 실패: {e}", err=True)
+                errors += summary.errors
+    except JobLockedError as e:
+        raise _fail("이미 실행 중입니다", EXIT_LOCKED) from e
+    if errors:
+        status = "error"
+    _log_job(engine, "prices", status, rows, "; ".join(errors)[:300] or None)
+    if errors and rows == 0:
+        raise typer.Exit(EXIT_SYSTEM_ERROR)
+
+
+@app.command(help="매일 할 작업을 순서대로 실행합니다 (실시간 가격 → AI 추천, 단계별 실패와 무관하게 계속).")
+def daily(
+    log: Annotated[
+        Path | None, typer.Option("--log", help="출력을 이어서 기록할 파일 (기본: data/logs/daily.log)")
+    ] = None,
+) -> None:
+    """Run the daily pipeline and record it in job_log."""
+    from dongseon.daily import run_daily
+
+    target = log or (REPO_ROOT / "data" / "logs" / "daily.log")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    results = run_daily(target)
+    settings = get_settings()
+    upgrade_schema(settings.database_file)
+    ok = any(r.returncode in (0, 3) for r in results)
+    _log_job(get_engine(settings.database_file), "daily", "ok" if ok else "error", len(results), None)
+    if not ok:
+        raise typer.Exit(EXIT_SYSTEM_ERROR)

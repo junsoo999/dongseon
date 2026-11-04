@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import type { FlightOut } from '../api/client'
 import { useFlights } from '../api/hooks'
 import { FlightSheet } from '../components/FlightSheet'
+import { LiveFares } from '../components/LivePrices'
 import { FlightSearchLinks } from '../components/SearchLinks'
 import {
   formatKrw,
@@ -15,7 +16,12 @@ import {
 import { useCurrentTrip } from '../lib/trip'
 import { Page } from '../components/MapLayout'
 
-const REF_LABEL = { booked_stay: '확정 숙소', top_area: '1위 동네', none: '' } as const
+const REF_LABEL = {
+  booked_stay: '확정 숙소',
+  top_area: '1위 동네',
+  first_area: '기본 동네',
+  none: '',
+} as const
 
 function Timeline({ flights }: { flights: FlightOut[] }) {
   const rows = flights.filter((f) => f.evaluation)
@@ -219,6 +225,7 @@ export function Flights() {
         </button>
       </div>
 
+      <LiveFares tripId={trip.id} />
       <FlightSearchLinks tripId={trip.id} />
       {flights.isError && <p className="text-sm text-red-700">{flights.error.message}</p>}
       {noReference && (
