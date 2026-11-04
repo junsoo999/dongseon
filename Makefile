@@ -1,4 +1,4 @@
-.PHONY: install dev serve backend frontend lint fmt test gen-types db-upgrade usage launchd-install launchd-uninstall launchd-status app-restart remote-hash remote-check clean help
+.PHONY: install dev serve backend frontend lint fmt test gen-types db-upgrade usage launchd-install daily prices scout launchd-uninstall launchd-status app-restart remote-hash remote-check clean help
 
 # Default python version
 PYTHON_VERSION ?= 3.12
@@ -76,10 +76,12 @@ db-upgrade:
 usage:
 	@uv run --no-sync dongseon usage
 
-# Always-on services via macOS launchd (JOB=serve|caddy; daily comes in M5)
+# Always-on services and the daily job via macOS launchd (JOB=serve|caddy|daily)
 JOB ?= serve
+HOUR ?= 6
+MINUTE ?= 0
 launchd-install:
-	@bash scripts/launchd.sh install --job $(JOB)
+	@bash scripts/launchd.sh install --job $(JOB) $(if $(filter daily,$(JOB)),--hour $(HOUR) --minute $(MINUTE),)
 
 launchd-uninstall:
 	@bash scripts/launchd.sh uninstall --job $(JOB)
@@ -90,6 +92,16 @@ launchd-status:
 # Rebuild the frontend and restart the always-on app after pulling new code
 app-restart:
 	@bash scripts/launchd.sh restart --job serve
+
+# Daily pipeline (what launchd JOB=daily runs), and its steps
+daily:
+	@uv run --no-sync dongseon daily
+
+prices:
+	@uv run --no-sync dongseon prices
+
+scout:
+	@uv run --no-sync dongseon scout
 
 # Remote access (Caddy basic auth behind the Cloudflare tunnel; see README)
 remote-hash:
@@ -125,7 +137,10 @@ help:
 	@echo "  gen-types  - Regenerate frontend/src/api/schema.d.ts from OpenAPI"
 	@echo "  db-upgrade - Apply DB migrations"
 	@echo "  usage      - Google API calls per SKU this month vs free caps"
-	@echo "  launchd-install   - Install an always-on service via launchd (serve: 127.0.0.1:8100, caddy) ([JOB=serve|caddy])"
+	@echo "  daily      - Live prices then AI scouting (what launchd JOB=daily runs)"
+	@echo "  prices     - Ignav fares + Rakuten Travel vacancies for upcoming trips"
+	@echo "  scout      - AI research for places and stays (Claude Code)"
+	@echo "  launchd-install   - Install an always-on service via launchd (serve: 127.0.0.1:8100, caddy) ([JOB=serve|caddy|daily] [HOUR=6])"
 	@echo "  launchd-uninstall - Remove a launchd agent ([JOB=serve|caddy])"
 	@echo "  launchd-status    - Show agent state and last log lines ([JOB=serve|caddy])"
 	@echo "  app-restart       - Rebuild the frontend and restart the always-on app"

@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from dongseon import __version__
-from dongseon.api.routes import flights, health, jobs, places, scout, stays, trips, usage
+from dongseon.api.routes import flights, health, jobs, places, prices, scout, stays, trips, usage
 from dongseon.core.config import REPO_ROOT, get_settings
 from dongseon.core.usage import FreeTierExceededError
 from dongseon.db.session import upgrade_schema
@@ -83,6 +83,7 @@ def create_app() -> FastAPI:
     app.include_router(stays.router, prefix="/api")
     app.include_router(flights.router, prefix="/api")
     app.include_router(scout.router, prefix="/api")
+    app.include_router(prices.router, prefix="/api")
     app.include_router(jobs.router, prefix="/api")
     add_error_handlers(app)
     mount_frontend(app, FRONTEND_DIST)  # after the API routes so /api wins

@@ -1,0 +1,194 @@
+{
+  "pagingInfo": {
+    "recordCount": 71,
+    "pageCount": 15,
+    "page": 1,
+    "first": 1,
+    "last": 5
+  },
+  "hotels": [
+    [
+      {
+        "hotelBasicInfo": {
+          "hotelNo": 187176,
+          "hotelName": "トーセイホテル　ココネ築地銀座プレミア",
+          "hotelInformationUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/pvonD/?f_no=187176",
+          "planListUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/vFumt/?f_no=187176&f_flg=PLAN",
+          "dpPlanListUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/WzozX/?noTomariHotel=187176",
+          "reviewUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/gJNfM/?f_hotel_no=187176",
+          "hotelKanaName": "とーせいほてる　ここねつきじぎんざぷれみあ",
+          "hotelSpecial": "大浴場・サウナ完備！築地場外市場からすぐ！全室シモンズベッド、全室バス、洗面所、トイレが独立の和モダンホテル",
+          "hotelMinCharge": 9003,
+          "latitude": 35.66409250026366,
+          "longitude": 139.771321009787,
+          "postalCode": "104-0045",
+          "address1": "東京都",
+          "address2": "中央区築地6-23-8",
+          "telephoneNo": "",
+          "faxNo": "",
+          "access": "東京メトロ日比谷線築地駅徒歩7分、都営浅草線東銀座駅徒歩9分、都営大江戸線築地市場駅徒歩5分",
+          "parkingInformation": "完全予約制。ホテルまでご連絡をお願いいたします。1泊1台3,300円。満車の場合は駐車できません。",
+          "nearestStation": "築地市場",
+          "hotelImageUrl": "https://img.travel.rakuten.co.jp/share/HOTEL/187176/187176.jpg",
+          "hotelThumbnailUrl": "https://img.travel.rakuten.co.jp/HIMG/90/187176.jpg",
+          "roomImageUrl": null,
+          "roomThumbnailUrl": null,
+          "hotelMapImageUrl": "https://img.travel.rakuten.co.jp/share/HOTEL/187176/187176map.gif",
+          "reviewCount": 335,
+          "reviewAverage": 4.43,
+          "userReview": ""
+        }
+      },
+      {
+        "roomInfo": [
+          {
+            "roomBasicInfo": {
+              "roomClass": "md",
+              "roomName": "モデレートダブル【禁煙】",
+              "planId": 5783745,
+              "planName": "【さき楽】早期予約30日前割引（素泊まり）",
+              "pointRate": 1,
+              "withDinnerFlag": 0,
+              "dinnerSelectFlag": 0,
+              "withBreakfastFlag": 0,
+              "breakfastSelectFlag": 0,
+              "payment": "1",
+              "reserveUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/IdsCY/?f_no=187176&f_syu=md&f_hi1=2026-12-28&f_hi2=2027-01-01&f_heya_su=1&f_otona_su=2&f_s1=0&f_s2=0&f_y1=0&f_y2=0&f_y3=0&f_y4=0&f_camp_id=5783745",
+              "salesformFlag": 0
+            }
+          },
+          {
+            "dailyCharge": {
+              "stayDate": "2026-12-28",
+              "rakutenCharge": 20075,
+              "total": 40150,
+              "chargeFlag": 0
+            }
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "hotelBasicInfo": {
+          "hotelNo": 141356,
+          "hotelName": "高濃度炭酸泉　八重桜の湯　スーパーホテルＰｒｅｍｉｅｒ東京駅八重洲中央口",
+          "hotelInformationUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/pvonD/?f_no=141356",
+          "planListUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/vFumt/?f_no=141356&f_flg=PLAN",
+          "dpPlanListUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/WzozX/?noTomariHotel=141356",
+          "reviewUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/gJNfM/?f_hotel_no=141356",
+          "hotelKanaName": "やえざくらのゆ　すーぱーほてるぷれみあとうきょうえきやえすちゅうおうぐち",
+          "hotelSpecial": "東京駅から徒歩3分。男女別の大浴場「八重桜の湯」は健康イオン水大浴場と炭酸泉がお楽しみいただけます。",
+          "hotelMinCharge": 12220,
+          "latitude": 35.67922715,
+          "longitude": 139.7698432,
+          "postalCode": "104-0028",
+          "address1": "東京都",
+          "address2": "中央区八重洲2-2-7　 ",
+          "telephoneNo": "",
+          "faxNo": "",
+          "access": "東京駅より徒歩３分（八重洲中央口より）、羽田空港よりリムジンバスで30分、成田空港よりJRエクスプレスで60分。",
+          "parkingInformation": "事前予約制立体駐車場/1泊3000円 /入庫時間・車高制限有",
+          "nearestStation": "東京",
+          "hotelImageUrl": "https://img.travel.rakuten.co.jp/share/HOTEL/141356/141356.jpg",
+          "hotelThumbnailUrl": "https://img.travel.rakuten.co.jp/HIMG/90/141356.jpg",
+          "roomImageUrl": null,
+          "roomThumbnailUrl": null,
+          "hotelMapImageUrl": "https://img.travel.rakuten.co.jp/share/HOTEL/141356/141356map.gif",
+          "reviewCount": 4399,
+          "reviewAverage": 4.44,
+          "userReview": ""
+        }
+      },
+      {
+        "roomInfo": [
+          {
+            "roomBasicInfo": {
+              "roomClass": "sma",
+              "roomName": "【素泊まり】お部屋タイプお任せ",
+              "planId": 5111410,
+              "planName": "【素泊まり】【連泊】2泊以上におススメ！連泊プラン☆高濃度人工炭酸泉付き",
+              "pointRate": 1,
+              "withDinnerFlag": 0,
+              "dinnerSelectFlag": 0,
+              "withBreakfastFlag": 0,
+              "breakfastSelectFlag": 0,
+              "payment": "1",
+              "reserveUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/IdsCY/?f_no=141356&f_syu=sma&f_hi1=2026-12-28&f_hi2=2027-01-01&f_heya_su=1&f_otona_su=2&f_s1=0&f_s2=0&f_y1=0&f_y2=0&f_y3=0&f_y4=0&f_camp_id=5111410",
+              "salesformFlag": 0
+            }
+          },
+          {
+            "dailyCharge": {
+              "stayDate": "2026-12-28",
+              "rakutenCharge": 17950,
+              "total": 35900,
+              "chargeFlag": 0
+            }
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "hotelBasicInfo": {
+          "hotelNo": 178610,
+          "hotelName": "ダイワロイネットホテル東京京橋　ＰＲＥＭＩＥＲ",
+          "hotelInformationUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/pvonD/?f_no=178610",
+          "planListUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/vFumt/?f_no=178610&f_flg=PLAN",
+          "dpPlanListUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/WzozX/?noTomariHotel=178610",
+          "reviewUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/gJNfM/?f_hotel_no=178610",
+          "hotelKanaName": "だいわろいねっとほてるとうきょうきょうばし",
+          "hotelSpecial": "東京メトロ「京橋駅」より徒歩約1分。「東京駅」や銀座も徒歩圏内の好立地。1階コンビニありで便利。バス・トイレ別で快適",
+          "hotelMinCharge": 15742,
+          "latitude": 35.6774081,
+          "longitude": 139.77081199999998,
+          "postalCode": "104-0031",
+          "address1": "東京都",
+          "address2": "中央区京橋2-8-20",
+          "telephoneNo": "",
+          "faxNo": "",
+          "access": "東京メトロ銀座線「京橋駅」6番出口より徒歩約1分。JR「東京駅」八重洲南口から徒歩約7分。「日本橋駅」や銀座も徒歩圏内。",
+          "parkingInformation": "24台（内ハイルーフ8台）1泊（14時〜翌11時）2,800円税込／先着順／車高2.0m以下",
+          "nearestStation": "京橋（東京）",
+          "hotelImageUrl": "https://img.travel.rakuten.co.jp/share/HOTEL/178610/178610.jpg",
+          "hotelThumbnailUrl": "https://img.travel.rakuten.co.jp/HIMG/90/178610.jpg",
+          "roomImageUrl": null,
+          "roomThumbnailUrl": null,
+          "hotelMapImageUrl": "https://img.travel.rakuten.co.jp/share/HOTEL/178610/178610map.gif",
+          "reviewCount": 770,
+          "reviewAverage": 4.45,
+          "userReview": ""
+        }
+      },
+      {
+        "roomInfo": [
+          {
+            "roomBasicInfo": {
+              "roomClass": "sdn2",
+              "roomName": "スーペリアダブル禁煙2名",
+              "planId": 4625148,
+              "planName": "【連泊】素泊りプラン",
+              "pointRate": 1,
+              "withDinnerFlag": 0,
+              "dinnerSelectFlag": 0,
+              "withBreakfastFlag": 0,
+              "breakfastSelectFlag": 0,
+              "payment": "1",
+              "reserveUrl": "https://img.travel.rakuten.co.jp/image/tr/api/re/IdsCY/?f_no=178610&f_syu=sdn2&f_hi1=2026-12-28&f_hi2=2027-01-01&f_heya_su=1&f_otona_su=2&f_s1=0&f_s2=0&f_y1=0&f_y2=0&f_y3=0&f_y4=0&f_camp_id=4625148",
+              "salesformFlag": 0
+            }
+          },
+          {
+            "dailyCharge": {
+              "stayDate": "2026-12-28",
+              "rakutenCharge": 22610,
+              "total": 45220,
+              "chargeFlag": 0
+            }
+          }
+        ]
+      }
+    ]
+  ]
+}

@@ -456,6 +456,130 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/trips/{trip_id}/fares': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Fares
+     * @description Latest fares, best value (KRW per usable hour) first, plus the cheapest.
+     */
+    get: operations['fares_api_trips__trip_id__fares_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/fares/{fare_id}/add': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Add Fare
+     * @description Copy a fare into the trip's flight options, with a booking link when Ignav has one.
+     */
+    post: operations['add_fare_api_trips__trip_id__fares__fare_id__add_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/hotels': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Hotels
+     * @description Latest vacancies per area, cheapest first.
+     */
+    get: operations['hotels_api_trips__trip_id__hotels_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/hotels/{vacancy_id}/add': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Add Hotel
+     * @description Copy a vacancy into the trip's stay candidates (total estimated from the first night's rate).
+     */
+    post: operations['add_hotel_api_trips__trip_id__hotels__vacancy_id__add_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/price-history': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Price History
+     * @description Daily lowest prices per route and area.
+     */
+    get: operations['price_history_api_trips__trip_id__price_history_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/fare-prefs': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Fare Prefs
+     * @description The trip's flight search conditions (profile and city defaults when nothing is saved).
+     */
+    get: operations['get_fare_prefs_api_trips__trip_id__fare_prefs_get']
+    /**
+     * Put Fare Prefs
+     * @description Save the trip's flight search conditions (used by the next price refresh).
+     */
+    put: operations['put_fare_prefs_api_trips__trip_id__fare_prefs_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/jobs/{name}': {
     parameters: {
       query?: never
@@ -491,6 +615,16 @@ export interface components {
     AcceptOut: {
       /** Pin Id */
       pin_id: number | null
+      /** Stay Id */
+      stay_id: number | null
+    }
+    /**
+     * AddedOut
+     * @description What was created from an offer.
+     */
+    AddedOut: {
+      /** Flight Id */
+      flight_id: number | null
       /** Stay Id */
       stay_id: number | null
     }
@@ -547,6 +681,18 @@ export interface components {
       rank: number | null
       /** Links */
       links: components['schemas']['LinkOut'][]
+    }
+    /**
+     * AreaVacanciesOut
+     * @description Vacancies around one area's main station.
+     */
+    AreaVacanciesOut: {
+      /** Area */
+      area: string
+      /** Emoji */
+      emoji: string | null
+      /** Items */
+      items: components['schemas']['VacancyOut'][]
     }
     /**
      * AutocompleteOut
@@ -619,13 +765,149 @@ export interface components {
        * Reference Kind
        * @enum {string}
        */
-      reference_kind: 'booked_stay' | 'top_area' | 'none'
+      reference_kind: 'booked_stay' | 'top_area' | 'first_area' | 'none'
       /** Total Krw */
       total_krw: number | null
       /** Krw Per Usable Hour */
       krw_per_usable_hour: number | null
       /** Warnings */
       warnings: string[]
+    }
+    /**
+     * FareLegOut
+     * @description One flight of a fare, in local time.
+     */
+    FareLegOut: {
+      /** Direction */
+      direction: string
+      /** Flight */
+      flight: string
+      /** Carrier */
+      carrier: string | null
+      /** Dep Airport */
+      dep_airport: string
+      /** Dep Local */
+      dep_local: string
+      /** Arr Airport */
+      arr_airport: string
+      /** Arr Local */
+      arr_local: string
+    }
+    /**
+     * FareOut
+     * @description A fare with its usable local time (airport↔stay minutes are approximations).
+     */
+    FareOut: {
+      /** Id */
+      id: number
+      /** Route */
+      route: string
+      /** Amount */
+      amount: number
+      /** Currency */
+      currency: string
+      /** Total Krw */
+      total_krw: number | null
+      /** Legs */
+      legs: components['schemas']['FareLegOut'][]
+      /** Usable Min */
+      usable_min: number | null
+      /** Krw Per Usable Hour */
+      krw_per_usable_hour: number | null
+      /** Best Value */
+      best_value: boolean
+      /** Cheapest */
+      cheapest: boolean
+    }
+    /**
+     * FarePrefsIO
+     * @description Flight search conditions. Hours are local (0-23) at the departure airport.
+     */
+    FarePrefsIO: {
+      /** Adults */
+      adults: number
+      /**
+       * Children
+       * @default 0
+       */
+      children: number
+      /** Origins */
+      origins: string[]
+      /** Destinations */
+      destinations: string[]
+      /**
+       * Max Stops
+       * @default 0
+       */
+      max_stops: number | null
+      /** Checked Bags */
+      checked_bags?: number | null
+      /** Out Dep From */
+      out_dep_from?: number | null
+      /** Out Dep To */
+      out_dep_to?: number | null
+      /** Back Dep From */
+      back_dep_from?: number | null
+      /** Back Dep To */
+      back_dep_to?: number | null
+      /** Max Price Krw */
+      max_price_krw?: number | null
+      /** Airlines Exclude */
+      airlines_exclude?: string[]
+    }
+    /**
+     * FarePrefsOut
+     * @description Saved conditions plus the airports that can be chosen.
+     */
+    FarePrefsOut: {
+      /** Adults */
+      adults: number
+      /**
+       * Children
+       * @default 0
+       */
+      children: number
+      /** Origins */
+      origins: string[]
+      /** Destinations */
+      destinations: string[]
+      /**
+       * Max Stops
+       * @default 0
+       */
+      max_stops: number | null
+      /** Checked Bags */
+      checked_bags?: number | null
+      /** Out Dep From */
+      out_dep_from?: number | null
+      /** Out Dep To */
+      out_dep_to?: number | null
+      /** Back Dep From */
+      back_dep_from?: number | null
+      /** Back Dep To */
+      back_dep_to?: number | null
+      /** Max Price Krw */
+      max_price_krw?: number | null
+      /** Airlines Exclude */
+      airlines_exclude?: string[]
+      /** Airport Choices */
+      airport_choices: string[]
+      /** Saved */
+      saved: boolean
+    }
+    /**
+     * FaresOut
+     * @description Latest fares for a trip.
+     */
+    FaresOut: {
+      /** Fetched At */
+      fetched_at: string | null
+      /** Reference Label */
+      reference_label: string | null
+      /** Reference Kind */
+      reference_kind: string
+      /** Items */
+      items: components['schemas']['FareOut'][]
     }
     /**
      * FlightIn
@@ -726,6 +1008,43 @@ export interface components {
       keys: {
         [key: string]: boolean
       }
+    }
+    /**
+     * HistoryPoint
+     * @description Lowest price on one day.
+     */
+    HistoryPoint: {
+      /** Kind */
+      kind: string
+      /** Key */
+      key: string
+      /**
+       * Day
+       * Format: date
+       */
+      day: string
+      /** Min Amount */
+      min_amount: number
+      /** Currency */
+      currency: string
+    }
+    /**
+     * HotelsOut
+     * @description Latest vacancies for a trip, with the required Rakuten credit.
+     */
+    HotelsOut: {
+      /** Fetched At */
+      fetched_at: string | null
+      /** Check In */
+      check_in: string | null
+      /** Check Out */
+      check_out: string | null
+      /** Credit Text */
+      credit_text: string
+      /** Credit Url */
+      credit_url: string
+      /** Areas */
+      areas: components['schemas']['AreaVacanciesOut'][]
     }
     /**
      * JobStatus
@@ -1308,6 +1627,36 @@ export interface components {
       caps_source_url: string
       /** Skus */
       skus: components['schemas']['SkuUsageOut'][]
+    }
+    /**
+     * VacancyOut
+     * @description A hotel with vacancies (Rakuten Travel).
+     */
+    VacancyOut: {
+      /** Id */
+      id: number
+      /** Name */
+      name: string
+      /** Nearest Station */
+      nearest_station: string | null
+      /** Review Average */
+      review_average: number | null
+      /** Review Count */
+      review_count: number | null
+      /** Thumbnail Url */
+      thumbnail_url: string | null
+      /** Info Url */
+      info_url: string | null
+      /** Room Name */
+      room_name: string | null
+      /** Nightly Jpy */
+      nightly_jpy: number | null
+      /** Nightly Krw */
+      nightly_krw: number | null
+      /** Bath Hint */
+      bath_hint: boolean
+      /** Reserve Url */
+      reserve_url: string | null
     }
     /** ValidationError */
     ValidationError: {
@@ -2200,12 +2549,235 @@ export interface operations {
       }
     }
   }
+  fares_api_trips__trip_id__fares_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FaresOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  add_fare_api_trips__trip_id__fares__fare_id__add_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+        fare_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AddedOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  hotels_api_trips__trip_id__hotels_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HotelsOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  add_hotel_api_trips__trip_id__hotels__vacancy_id__add_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+        vacancy_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AddedOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  price_history_api_trips__trip_id__price_history_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HistoryPoint'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_fare_prefs_api_trips__trip_id__fare_prefs_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FarePrefsOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  put_fare_prefs_api_trips__trip_id__fare_prefs_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FarePrefsIO']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FarePrefsOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   job_status_api_jobs__name__get: {
     parameters: {
       query?: never
       header?: never
       path: {
-        name: 'places-resolve' | 'scout'
+        name: 'places-resolve' | 'scout' | 'prices'
       }
       cookie?: never
     }
@@ -2236,7 +2808,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        name: 'places-resolve' | 'scout'
+        name: 'places-resolve' | 'scout' | 'prices'
       }
       cookie?: never
     }

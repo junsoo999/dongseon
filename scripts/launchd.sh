@@ -11,11 +11,14 @@ show_help() {
     echo
     echo "Jobs:"
     echo "  serve         the built app on 127.0.0.1:8100, always on (restarted if it exits)"
+    echo "  daily         'dongseon daily' every day (default 06:00): live prices, then AI scouting"
     echo "  caddy         Caddy (basic auth) on 127.0.0.1:\$DONGSEON_PROXY_PORT (default 8081) in front of serve"
-    echo "                (daily is added in M5; the Cloudflare tunnel connector is shared, see README)"
+    echo "                (the Cloudflare tunnel connector is shared, see README)"
     echo
     echo "Options:"
-    echo "  --job NAME      serve | caddy (default: serve)"
+    echo "  --job NAME      serve | caddy | daily (default: serve)"
+    echo "  --hour H        daily only: hour of day (0-23, default 6)"
+    echo "  --minute M      daily only: minute (0-59, default 0)"
     echo "  -h, --help      Show this help message"
     echo
     echo "Examples:"
@@ -29,11 +32,21 @@ show_help() {
 COMMAND="${1:-}"
 shift || true
 JOB="serve"
+HOUR=6
+MINUTE=0
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --job)
             JOB="$2"
+            shift 2
+            ;;
+        --hour)
+            HOUR="$2"
+            shift 2
+            ;;
+        --minute)
+            MINUTE="$2"
             shift 2
             ;;
         -h|--help)
@@ -58,6 +71,12 @@ case "$JOB" in
         WHEN="always (127.0.0.1:8100)"
         LOG="$LOG_DIR/serve.log"
         ;;
+    daily)
+        LABEL="com.dongseon.daily"
+        PROGRAM="<string>$DONGSEON_BIN</string><string>daily</string>"
+        WHEN="$(printf 'every day at %02d:%02d' "$HOUR" "$MINUTE")"
+        LOG="$LOG_DIR/launchd-daily.log"
+        ;;
     caddy)
         LABEL="com.dongseon.caddy"
         PROGRAM="<string>/bin/bash</string><string>$WORKSPACE_PATH/scripts/caddy.sh</string><string>run</string>"
@@ -72,8 +91,13 @@ case "$JOB" in
 esac
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 
-# Long-running service: start at login, restart if it exits (throttled to once per 10 s)
-TRIGGER="<key>RunAtLoad</key><true/><key>KeepAlive</key><true/><key>ThrottleInterval</key><integer>10</integer>"
+if [[ "$JOB" == "daily" ]]; then
+    # Scheduled job: a Mac asleep at that time runs it on wake; a Mac powered off skips that day
+    TRIGGER="<key>StartCalendarInterval</key><dict><key>Hour</key><integer>$HOUR</integer><key>Minute</key><integer>$MINUTE</integer></dict>"
+else
+    # Long-running service: start at login, restart if it exits (throttled to once per 10 s)
+    TRIGGER="<key>RunAtLoad</key><true/><key>KeepAlive</key><true/><key>ThrottleInterval</key><integer>10</integer>"
+fi
 
 build_frontend() {
     echo "Building the frontend..."
@@ -82,11 +106,13 @@ build_frontend() {
 
 case "$COMMAND" in
     install)
-        if [[ "$JOB" == "serve" ]]; then
+        if [[ "$JOB" == "serve" || "$JOB" == "daily" ]]; then
             if [[ ! -x "$DONGSEON_BIN" ]]; then
                 echo "Error: $DONGSEON_BIN not found. Run 'make install' first."
                 exit 1
             fi
+        fi
+        if [[ "$JOB" == "serve" ]]; then
             build_frontend
         fi
         if [[ "$JOB" == "caddy" ]]; then

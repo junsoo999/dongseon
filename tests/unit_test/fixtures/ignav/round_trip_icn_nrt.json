@@ -1,0 +1,217 @@
+{
+  "origin": "ICN",
+  "destination": "NRT",
+  "departure_date": "2026-12-28",
+  "return_date": "2027-01-01",
+  "itineraries": [
+    {
+      "price": {
+        "amount": 775004.0,
+        "currency": "KRW",
+        "status": "verified"
+      },
+      "outbound": {
+        "carrier": "에어서울",
+        "duration_minutes": 135,
+        "segments": [
+          {
+            "marketing_carrier_code": "RS",
+            "flight_number": "247",
+            "operating_carrier_name": "에어서울",
+            "departure_airport": "ICN",
+            "departure_time_local": "2026-12-28T08:10:00",
+            "departure_timezone": "Asia/Seoul",
+            "departure_time_utc": "2026-12-27T23:10:00Z",
+            "arrival_airport": "NRT",
+            "arrival_time_local": "2026-12-28T10:25:00",
+            "arrival_timezone": "Asia/Tokyo",
+            "arrival_time_utc": "2026-12-28T01:25:00Z",
+            "duration_minutes": 135,
+            "aircraft": "Airbus A321"
+          }
+        ]
+      },
+      "inbound": {
+        "carrier": "제주항공",
+        "duration_minutes": 180,
+        "segments": [
+          {
+            "marketing_carrier_code": "7C",
+            "flight_number": "1108",
+            "operating_carrier_name": "제주항공",
+            "departure_airport": "NRT",
+            "departure_time_local": "2027-01-01T18:15:00",
+            "departure_timezone": "Asia/Tokyo",
+            "departure_time_utc": "2027-01-01T09:15:00Z",
+            "arrival_airport": "ICN",
+            "arrival_time_local": "2027-01-01T21:15:00",
+            "arrival_timezone": "Asia/Seoul",
+            "arrival_time_utc": "2027-01-01T12:15:00Z",
+            "duration_minutes": 180,
+            "aircraft": "Boeing 737MAX 8 Passenger"
+          }
+        ]
+      },
+      "cabin_class": "economy",
+      "has_mixed_carriers": false,
+      "ignav_id": "9a8772ff1f584282b60b608b50fc59b9"
+    },
+    {
+      "price": {
+        "amount": 775004.0,
+        "currency": "KRW",
+        "status": "verified"
+      },
+      "outbound": {
+        "carrier": "에어서울",
+        "duration_minutes": 135,
+        "segments": [
+          {
+            "marketing_carrier_code": "RS",
+            "flight_number": "247",
+            "operating_carrier_name": "에어서울",
+            "departure_airport": "ICN",
+            "departure_time_local": "2026-12-28T08:10:00",
+            "departure_timezone": "Asia/Seoul",
+            "departure_time_utc": "2026-12-27T23:10:00Z",
+            "arrival_airport": "NRT",
+            "arrival_time_local": "2026-12-28T10:25:00",
+            "arrival_timezone": "Asia/Tokyo",
+            "arrival_time_utc": "2026-12-28T01:25:00Z",
+            "duration_minutes": 135,
+            "aircraft": "Airbus A321"
+          }
+        ]
+      },
+      "inbound": {
+        "carrier": "제주항공",
+        "duration_minutes": 180,
+        "segments": [
+          {
+            "marketing_carrier_code": "7C",
+            "flight_number": "1184",
+            "operating_carrier_name": "제주항공",
+            "departure_airport": "NRT",
+            "departure_time_local": "2027-01-01T13:15:00",
+            "departure_timezone": "Asia/Tokyo",
+            "departure_time_utc": "2027-01-01T04:15:00Z",
+            "arrival_airport": "ICN",
+            "arrival_time_local": "2027-01-01T16:15:00",
+            "arrival_timezone": "Asia/Seoul",
+            "arrival_time_utc": "2027-01-01T07:15:00Z",
+            "duration_minutes": 180,
+            "aircraft": "Boeing 737"
+          }
+        ]
+      },
+      "cabin_class": "economy",
+      "has_mixed_carriers": false,
+      "ignav_id": "d8f202bc456b48af87c25597d83f55f0"
+    },
+    {
+      "price": {
+        "amount": 779804.0,
+        "currency": "KRW",
+        "status": "verified"
+      },
+      "outbound": {
+        "carrier": "제주항공",
+        "duration_minutes": 140,
+        "segments": [
+          {
+            "marketing_carrier_code": "7C",
+            "flight_number": "1109",
+            "operating_carrier_name": "제주항공",
+            "departure_airport": "ICN",
+            "departure_time_local": "2026-12-28T16:20:00",
+            "departure_timezone": "Asia/Seoul",
+            "departure_time_utc": "2026-12-28T07:20:00Z",
+            "arrival_airport": "NRT",
+            "arrival_time_local": "2026-12-28T18:40:00",
+            "arrival_timezone": "Asia/Tokyo",
+            "arrival_time_utc": "2026-12-28T09:40:00Z",
+            "duration_minutes": 140,
+            "aircraft": "Boeing 737"
+          }
+        ]
+      },
+      "inbound": {
+        "carrier": "제주항공",
+        "duration_minutes": 180,
+        "segments": [
+          {
+            "marketing_carrier_code": "7C",
+            "flight_number": "1108",
+            "operating_carrier_name": "제주항공",
+            "departure_airport": "NRT",
+            "departure_time_local": "2027-01-01T18:15:00",
+            "departure_timezone": "Asia/Tokyo",
+            "departure_time_utc": "2027-01-01T09:15:00Z",
+            "arrival_airport": "ICN",
+            "arrival_time_local": "2027-01-01T21:15:00",
+            "arrival_timezone": "Asia/Seoul",
+            "arrival_time_utc": "2027-01-01T12:15:00Z",
+            "duration_minutes": 180,
+            "aircraft": "Boeing 737MAX 8 Passenger"
+          }
+        ]
+      },
+      "cabin_class": "economy",
+      "has_mixed_carriers": false,
+      "ignav_id": "51ef4f2137d446b9aeaa870e3673e215"
+    },
+    {
+      "price": {
+        "amount": 779804.0,
+        "currency": "KRW",
+        "status": "verified"
+      },
+      "outbound": {
+        "carrier": "제주항공",
+        "duration_minutes": 140,
+        "segments": [
+          {
+            "marketing_carrier_code": "7C",
+            "flight_number": "1109",
+            "operating_carrier_name": "제주항공",
+            "departure_airport": "ICN",
+            "departure_time_local": "2026-12-28T16:20:00",
+            "departure_timezone": "Asia/Seoul",
+            "departure_time_utc": "2026-12-28T07:20:00Z",
+            "arrival_airport": "NRT",
+            "arrival_time_local": "2026-12-28T18:40:00",
+            "arrival_timezone": "Asia/Tokyo",
+            "arrival_time_utc": "2026-12-28T09:40:00Z",
+            "duration_minutes": 140,
+            "aircraft": "Boeing 737"
+          }
+        ]
+      },
+      "inbound": {
+        "carrier": "제주항공",
+        "duration_minutes": 180,
+        "segments": [
+          {
+            "marketing_carrier_code": "7C",
+            "flight_number": "1108",
+            "operating_carrier_name": "제주항공",
+            "departure_airport": "NRT",
+            "departure_time_local": "2027-01-01T18:15:00",
+            "departure_timezone": "Asia/Tokyo",
+            "departure_time_utc": "2027-01-01T09:15:00Z",
+            "arrival_airport": "ICN",
+            "arrival_time_local": "2027-01-01T21:15:00",
+            "arrival_timezone": "Asia/Seoul",
+            "arrival_time_utc": "2027-01-01T12:15:00Z",
+            "duration_minutes": 180,
+            "aircraft": "Boeing 737MAX 8 Passenger"
+          }
+        ]
+      },
+      "cabin_class": "economy",
+      "has_mixed_carriers": false,
+      "ignav_id": "51ef4f2137d446b9aeaa870e3673e215"
+    }
+  ],
+  "observed_at": "2026-11-04T16:15:27.694801Z"
+}

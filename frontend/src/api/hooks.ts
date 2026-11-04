@@ -20,6 +20,10 @@ import {
   type FlightOut,
   type AiSuggestionOut,
   type SearchLinksOut,
+  type FaresOut,
+  type HotelsOut,
+  type FarePrefsIO,
+  type FarePrefsOut,
   type SuggestionOut,
   type TripIn,
   type TripOut,
@@ -234,7 +238,7 @@ export function useDeleteFlight(tripId: number | null) {
   })
 }
 
-type JobName = 'places-resolve' | 'scout'
+type JobName = 'places-resolve' | 'scout' | 'prices'
 
 /** A background job's state; polls every 5 s while it runs. */
 export function useJob(name: JobName) {
@@ -281,5 +285,49 @@ export function useSearchLinks(tripId: number | null) {
     queryFn: () => apiGet<SearchLinksOut>(`/trips/${tripId}/search-links`),
     enabled: tripId !== null,
     staleTime: 10 * 60_000,
+  })
+}
+
+export function useFares(tripId: number | null) {
+  return useQuery({
+    queryKey: ['fares', tripId],
+    queryFn: () => apiGet<FaresOut>(`/trips/${tripId}/fares`),
+    enabled: tripId !== null,
+  })
+}
+
+export function useHotels(tripId: number | null) {
+  return useQuery({
+    queryKey: ['hotels', tripId],
+    queryFn: () => apiGet<HotelsOut>(`/trips/${tripId}/hotels`),
+    enabled: tripId !== null,
+  })
+}
+
+export function useAddOffer(tripId: number | null, kind: 'fares' | 'hotels') {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => apiSend<unknown>('POST', `/trips/${tripId}/${kind}/${id}/add`),
+    onSuccess: () => {
+      for (const key of ['flights', 'stays', 'stayScore'])
+        void qc.invalidateQueries({ queryKey: [key, tripId] })
+    },
+  })
+}
+
+export function useFarePrefs(tripId: number | null) {
+  return useQuery({
+    queryKey: ['farePrefs', tripId],
+    queryFn: () => apiGet<FarePrefsOut>(`/trips/${tripId}/fare-prefs`),
+    enabled: tripId !== null,
+  })
+}
+
+export function useSaveFarePrefs(tripId: number | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: FarePrefsIO) =>
+      apiSend<FarePrefsOut>('PUT', `/trips/${tripId}/fare-prefs`, body),
+    onSuccess: (data) => qc.setQueryData(['farePrefs', tripId], data),
   })
 }

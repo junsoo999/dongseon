@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     google_free_tier_warn_ratio: float = 0.8
     google_free_tier_stop_ratio: float = 1.0
 
+    ignav_api_key: str = ""
+    rakuten_app_id: str = ""
+    rakuten_access_key: str = ""
+    rakuten_referer: str = ""  # the site URL registered with the Rakuten app (sent as Referer/Origin)
+
     llm_model: str = ""
     llm_daily_token_limit: int = 500_000
 
@@ -96,6 +101,8 @@ class Settings(BaseSettings):
             "google_maps_server": bool(self.google_maps_server_key),
             "google_maps_js": bool(self.vite_google_maps_js_key),
             "google_map_id": bool(self.vite_google_map_id),
+            "ignav": bool(self.ignav_api_key),
+            "rakuten": bool(self.rakuten_app_id and self.rakuten_access_key and self.rakuten_referer),
         }
 
 

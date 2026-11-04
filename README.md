@@ -23,6 +23,7 @@
 - **항공**: 후보별 현지 가용 시간과 총비용 비교 (검색은 Google Flights 등에서 직접, 공항별 시간대로 입력)
 - **일정**: OR-Tools로 영업시간·예약·식사 시간을 지키는 초안, 경고 배지, 드래그·잠금·다시 맞추기, 버전 비교
 - **AI 추천**: headless Claude Code가 가볼 곳·맛집·호텔을 웹에서 조사해 출처와 함께 추천 (수락하면 핀·숙소 후보), 이후 일정 검토·비 오는 날 대체안·연휴 영업 조사
+- **실시간 가격**: 매일 아침 Ignav 왕복 운임(현지 1시간당 비용 순 추천)과 楽天トラベル 빈방을 가져와 바로 후보로 추가
 - **검색 링크**: 항공권(Google, 네이버)·에어비앤비·부킹닷컴 검색을 여행 날짜·인원·상위 동네가 채워진 채로 열기
 - **오늘**: 지금과 다음 일정, Google Maps 길찾기 버튼, 날씨, 환율 계산기, 오프라인 읽기
 
@@ -95,6 +96,7 @@ dongseon은 자기 Caddy(비밀번호)를 `127.0.0.1:8081`에서 띄우고, 바�
 | `make gen-types` | OpenAPI → `frontend/src/api/schema.d.ts` |
 | `make db-upgrade` | DB 마이그레이션 적용 |
 | `make usage` | 이번 달 Google SKU별 사용량과 무료 한도 |
+| `make prices` / `make scout` / `make daily` | 실시간 가격 / AI 추천 / 둘 다 (매일 자동은 `make launchd-install JOB=daily`) |
 | `make serve` | 프론트엔드를 빌드해 API와 한 포트로 실행 |
 | `make launchd-install` / `launchd-status` / `launchd-uninstall` | 상시 실행 관리 (`JOB=serve\|caddy`) |
 | `make app-restart` | 상시 앱 재빌드 + 재시작 |
@@ -115,6 +117,7 @@ dongseon은 자기 Caddy(비밀번호)를 `127.0.0.1:8081`에서 띄우고, 바�
 | M1 | 여행과 장소 (검색, 지도 링크, 핀, 지도) | 완료 |
 | M2 | 숙소 동네 점수, 숙소·항공 후보 비교 | 완료 |
 | M2.5 | AI 자동 후보 찾기(가볼 곳·맛집·호텔), 항공·숙소 검색 링크 | 검토 중 |
+| M2.6 | 실시간 가격: Ignav 항공 운임, 楽天トラベル 빈방, 매일 자동 갱신 | 검토 중 |
 | M3 | 일정 solver, validator, 편집·다시 맞추기 | |
 | M4 | AI 검토·조사·예약 메일 파싱 | |
 | M5 | 오늘 화면, daily, 원격 접속, 오프라인, 내보내기 | |

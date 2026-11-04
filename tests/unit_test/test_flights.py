@@ -144,5 +144,5 @@ def test_flight_without_pins_has_no_reference(api: ApiHarness) -> None:
         ],
     }
     ev = api.client.post(f"/api/trips/{trip['id']}/flights", json=body).json()["evaluation"]
-    assert ev["reference_kind"] == "none"
+    assert ev["reference_kind"] == "none"  # no key: areas cannot be located at all
     assert ev["usable_min"] is None
