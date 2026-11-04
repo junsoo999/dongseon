@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func, select
 
 from dongseon.api.deps import SessionDep, SettingsDep
-from dongseon.core.cities import CityNotFoundError, list_cities, load_city
+from dongseon.core.cities import CityConfig, CityNotFoundError, list_cities, load_city
 from dongseon.db.models import Trip, TripPin
 
 router = APIRouter(tags=["trips"])
@@ -65,27 +65,32 @@ class TripOut(BaseModel):
     pace: str
     status: str
     pin_count: int
+    center_lat: float | None
+    center_lng: float | None
 
 
-def _city_name(settings: SettingsDep, key: str) -> str:
+def _city(settings: SettingsDep, key: str) -> CityConfig | None:
     try:
-        return load_city(settings.cities_path, key).name
+        return load_city(settings.cities_path, key)
     except CityNotFoundError:
-        return key
+        return None
 
 
 def _out(trip: Trip, settings: SettingsDep, pin_count: int) -> TripOut:
+    city = _city(settings, trip.city_key)
     return TripOut(
         id=trip.id,
         title=trip.title,
         city_key=trip.city_key,
-        city_name=_city_name(settings, trip.city_key),
+        city_name=city.name if city else trip.city_key,
         start_date=trip.start_date,
         end_date=trip.end_date,
         timezone=trip.timezone,
         pace=trip.pace,
         status=trip.status,
         pin_count=pin_count,
+        center_lat=city.center.lat if city and city.center else None,
+        center_lng=city.center.lng if city and city.center else None,
     )
 
 

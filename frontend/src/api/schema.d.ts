@@ -519,6 +519,10 @@ export interface components {
       status: string
       /** Pin Count */
       pin_count: number
+      /** Center Lat */
+      center_lat: number | null
+      /** Center Lng */
+      center_lng: number | null
     }
     /**
      * TripPatch

@@ -50,6 +50,13 @@ class HolidayPeriod(BaseModel):
         return key >= self.start or key <= self.end
 
 
+class Center(BaseModel):
+    """A map center."""
+
+    lat: float
+    lng: float
+
+
 class CityConfig(BaseModel):
     """One city's static configuration."""
 
@@ -59,6 +66,7 @@ class CityConfig(BaseModel):
     timezone: str
     currency: str
     region_code: str | None = None
+    center: Center | None = None
     airports: list[Airport] = Field(default_factory=list)
     stay_areas: list[StayArea] = Field(default_factory=list)
     approx_speed_kmh: float | None = None
