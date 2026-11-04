@@ -220,6 +220,94 @@ export interface paths {
     patch: operations['patch_pin_api_trips__trip_id__pins__pin_id__patch']
     trace?: never
   }
+  '/api/fx': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Fx
+     * @description Latest reference rate (fetched at most once a day).
+     */
+    get: operations['fx_api_fx_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/stays': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List Stays
+     * @description List a trip's stay candidates and bookings.
+     */
+    get: operations['list_stays_api_trips__trip_id__stays_get']
+    put?: never
+    /**
+     * Create Stay
+     * @description Add a stay candidate.
+     */
+    post: operations['create_stay_api_trips__trip_id__stays_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/stays/{stay_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete Stay
+     * @description Remove a stay.
+     */
+    delete: operations['delete_stay_api_trips__trip_id__stays__stay_id__delete']
+    options?: never
+    head?: never
+    /**
+     * Patch Stay
+     * @description Edit a stay.
+     */
+    patch: operations['patch_stay_api_trips__trip_id__stays__stay_id__patch']
+    trace?: never
+  }
+  '/api/trips/{trip_id}/stays/score': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Score
+     * @description Rank configured neighborhoods and stay candidates by approximate travel time to must/want pins.
+     */
+    get: operations['score_api_trips__trip_id__stays_score_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/jobs/{name}': {
     parameters: {
       query?: never
@@ -274,6 +362,25 @@ export interface components {
       /** Currency */
       currency: string
     }
+    /**
+     * FxOut
+     * @description ``1 base = rate quote`` published on ``date``.
+     */
+    FxOut: {
+      /** Base */
+      base: string
+      /** Quote */
+      quote: string
+      /** Rate */
+      rate: number
+      /**
+       * Date
+       * Format: date
+       */
+      date: string
+      /** Source */
+      source: string
+    }
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -316,6 +423,39 @@ export interface components {
       last_rows: number | null
       /** Last Error */
       last_error: string | null
+    }
+    /**
+     * OriginOut
+     * @description Approximate travel summary from one area or stay (minutes; lower is better).
+     */
+    OriginOut: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'area' | 'stay'
+      /** Id */
+      id: string
+      /** Label */
+      label: string
+      /** Lat */
+      lat: number | null
+      /** Lng */
+      lng: number | null
+      /** Weighted Avg Min */
+      weighted_avg_min: number | null
+      /** Max Min */
+      max_min: number | null
+      /** Farthest Label */
+      farthest_label: string | null
+      /** Airport Min */
+      airport_min: {
+        [key: string]: number
+      }
+      /** Rank */
+      rank: number | null
+      /** Nightly Krw */
+      nightly_krw: number | null
     }
     /**
      * PinCreate
@@ -434,6 +574,32 @@ export interface components {
       reason: string | null
     }
     /**
+     * ScoreOut
+     * @description Neighborhood ranking for a trip. Every minute here is an approximation ("근사").
+     */
+    ScoreOut: {
+      /** Targets */
+      targets: number
+      /** Targets Without Coords */
+      targets_without_coords: number
+      /** Weights */
+      weights: {
+        [key: string]: number
+      }
+      /** Approx As Of */
+      approx_as_of: string | null
+      /** Approx Source Url */
+      approx_source_url: string | null
+      /** Airport Notes */
+      airport_notes: {
+        [key: string]: string
+      }
+      /** Fx */
+      fx: components['schemas']['FxOut'][]
+      /** Origins */
+      origins: components['schemas']['OriginOut'][]
+    }
+    /**
      * SkuUsageOut
      * @description One SKU's calls this month against its free cap (``cap`` is null when Google sets none).
      */
@@ -449,6 +615,110 @@ export interface components {
        * @enum {string}
        */
       level: 'ok' | 'warn' | 'stop'
+    }
+    /**
+     * StayIn
+     * @description A stay candidate: a Google place, or a point picked on the map (e.g. an Airbnb's rough location).
+     */
+    StayIn: {
+      /** Label */
+      label: string
+      /** Google Place Id */
+      google_place_id?: string | null
+      /** Session Token */
+      session_token?: string | null
+      /** User Lat */
+      user_lat?: number | null
+      /** User Lng */
+      user_lng?: number | null
+      /** Check In */
+      check_in?: string | null
+      /** Check Out */
+      check_out?: string | null
+      /** Total Amount */
+      total_amount?: number | null
+      /**
+       * Currency
+       * @default JPY
+       */
+      currency: string
+      /** Booking Url */
+      booking_url?: string | null
+      /** Note */
+      note?: string | null
+      /**
+       * Status
+       * @default candidate
+       * @enum {string}
+       */
+      status: 'candidate' | 'booked'
+    }
+    /**
+     * StayOut
+     * @description A stay with its location and nightly price.
+     */
+    StayOut: {
+      /** Id */
+      id: number
+      /** Label */
+      label: string
+      /** Google Place Id */
+      google_place_id: string | null
+      /** Lat */
+      lat: number | null
+      /** Lng */
+      lng: number | null
+      /**
+       * Location Source
+       * @enum {string}
+       */
+      location_source: 'google' | 'user'
+      /** Check In */
+      check_in: string | null
+      /** Check Out */
+      check_out: string | null
+      /** Nights */
+      nights: number | null
+      /** Total Amount */
+      total_amount: number | null
+      /** Currency */
+      currency: string
+      /** Nightly Amount */
+      nightly_amount: number | null
+      /** Nightly Krw */
+      nightly_krw: number | null
+      /** Booking Url */
+      booking_url: string | null
+      /** Note */
+      note: string | null
+      /** Status */
+      status: string
+    }
+    /**
+     * StayPatch
+     * @description Editable stay fields.
+     */
+    StayPatch: {
+      /** Label */
+      label?: string | null
+      /** User Lat */
+      user_lat?: number | null
+      /** User Lng */
+      user_lng?: number | null
+      /** Check In */
+      check_in?: string | null
+      /** Check Out */
+      check_out?: string | null
+      /** Total Amount */
+      total_amount?: number | null
+      /** Currency */
+      currency?: string | null
+      /** Booking Url */
+      booking_url?: string | null
+      /** Note */
+      note?: string | null
+      /** Status */
+      status?: ('candidate' | 'booked') | null
     }
     /**
      * SuggestionOut
@@ -967,6 +1237,201 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['PinOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  fx_api_fx_get: {
+    parameters: {
+      query?: {
+        base?: string
+        quote?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FxOut'] | null
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  list_stays_api_trips__trip_id__stays_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['StayOut'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_stay_api_trips__trip_id__stays_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['StayIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['StayOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_stay_api_trips__trip_id__stays__stay_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+        stay_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  patch_stay_api_trips__trip_id__stays__stay_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+        stay_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['StayPatch']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['StayOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  score_api_trips__trip_id__stays_score_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ScoreOut']
         }
       }
       /** @description Validation Error */

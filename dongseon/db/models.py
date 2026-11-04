@@ -113,3 +113,55 @@ class GeoCache(Base):
     lng: Mapped[float]
     fetched_at: Mapped[datetime] = mapped_column(UTCDateTime())
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime(), index=True)
+
+
+class AreaPlace(Base):
+    """A city's stay area or airport from ``config/cities/<city>.yaml``, linked to a Google place ID."""
+
+    __tablename__ = "area_places"
+    __table_args__ = (UniqueConstraint("city_key", "kind", "key", name="uq_area_places_city_kind_key"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    city_key: Mapped[str]
+    kind: Mapped[str]  # stay_area | airport
+    key: Mapped[str]  # area label or airport code
+    query: Mapped[str]  # the config query used to find it (re-resolved when the config changes)
+    google_place_id: Mapped[str | None]
+    resolved_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class Stay(Base):
+    """A stay candidate or booking. Location is a Google place or a point the user picked on the map."""
+
+    __tablename__ = "stays"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), index=True)
+    place_id: Mapped[int | None] = mapped_column(ForeignKey("places.id", ondelete="SET NULL"))
+    label: Mapped[str]
+    user_lat: Mapped[float | None]  # picked by the user (user data, not Google content)
+    user_lng: Mapped[float | None]
+    check_in: Mapped[date | None] = mapped_column(Date)
+    check_out: Mapped[date | None] = mapped_column(Date)
+    total_amount: Mapped[int | None]  # in the original currency's major unit (JPY and KRW have no minor unit)
+    currency: Mapped[str] = mapped_column(String(3))
+    booking_url: Mapped[str | None]
+    note: Mapped[str | None]
+    status: Mapped[str] = mapped_column(default="candidate")  # candidate | booked
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+    place: Mapped[Place | None] = relationship()
+
+
+class FxRate(Base):
+    """A reference exchange rate (ECB via Frankfurter) for one publication date."""
+
+    __tablename__ = "fx_rates"
+    __table_args__ = (UniqueConstraint("rate_date", "base", "quote", name="uq_fx_rates_date_base_quote"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    rate_date: Mapped[date] = mapped_column(Date)
+    base: Mapped[str] = mapped_column(String(3))
+    quote: Mapped[str] = mapped_column(String(3))
+    rate: Mapped[float]
+    fetched_at: Mapped[datetime] = mapped_column(UTCDateTime())

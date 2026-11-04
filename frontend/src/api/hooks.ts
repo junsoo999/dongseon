@@ -10,6 +10,11 @@ import {
   type PinOut,
   type PinPatch,
   type ResolveUrlOut,
+  type ScoreOut,
+  type StayIn,
+  type StayOut,
+  type StayPatch,
+  type FxOut,
   type SuggestionOut,
   type TripIn,
   type TripOut,
@@ -127,4 +132,63 @@ export function useResolveUrl() {
 
 export function useStartJob(name: 'places-resolve') {
   return useMutation({ mutationFn: () => apiSend<JobStatus>('POST', `/jobs/${name}`) })
+}
+
+export function useStays(tripId: number | null) {
+  return useQuery({
+    queryKey: ['stays', tripId],
+    queryFn: () => apiGet<StayOut[]>(`/trips/${tripId}/stays`),
+    enabled: tripId !== null,
+  })
+}
+
+export function useStayScore(tripId: number | null) {
+  return useQuery({
+    queryKey: ['stayScore', tripId],
+    queryFn: () => apiGet<ScoreOut>(`/trips/${tripId}/stays/score`),
+    enabled: tripId !== null,
+  })
+}
+
+export function useFx(base: string) {
+  return useQuery({
+    queryKey: ['fx', base],
+    queryFn: () => apiGet<FxOut | null>('/fx', { base }),
+    staleTime: 60 * 60_000,
+  })
+}
+
+function useInvalidateStays(tripId: number | null) {
+  const qc = useQueryClient()
+  return () => {
+    void qc.invalidateQueries({ queryKey: ['stays', tripId] })
+    void qc.invalidateQueries({ queryKey: ['stayScore', tripId] })
+    void qc.invalidateQueries({ queryKey: ['usage'] })
+  }
+}
+
+export function useCreateStay(tripId: number | null) {
+  const invalidate = useInvalidateStays(tripId)
+  return useMutation({
+    mutationFn: (body: Partial<StayIn> & { label: string }) =>
+      apiSend<StayOut>('POST', `/trips/${tripId}/stays`, body),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUpdateStay(tripId: number | null) {
+  const invalidate = useInvalidateStays(tripId)
+  return useMutation({
+    mutationFn: ({ id, ...body }: Partial<StayPatch> & { id: number }) =>
+      apiSend<StayOut>('PATCH', `/trips/${tripId}/stays/${id}`, body),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDeleteStay(tripId: number | null) {
+  const invalidate = useInvalidateStays(tripId)
+  return useMutation({
+    mutationFn: (id: number) => apiSend<void>('DELETE', `/trips/${tripId}/stays/${id}`),
+    onSuccess: invalidate,
+  })
 }

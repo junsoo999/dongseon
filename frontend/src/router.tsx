@@ -4,6 +4,7 @@ import { Home } from './pages/Home'
 import { More } from './pages/More'
 import { Placeholder } from './pages/Placeholder'
 import { Places } from './pages/Places'
+import { Stays } from './pages/Stays'
 import { Settings } from './pages/Settings'
 
 export const routes = [
@@ -13,7 +14,7 @@ export const routes = [
     children: [
       { index: true, element: <Home /> },
       { path: 'places', element: <Places /> },
-      { path: 'stays', element: <Placeholder title="숙소" milestone="M2" /> },
+      { path: 'stays', element: <Stays /> },
       { path: 'flights', element: <Placeholder title="항공" milestone="M2" /> },
       { path: 'itinerary', element: <Placeholder title="일정" milestone="M3" /> },
       { path: 'today', element: <Placeholder title="오늘" milestone="M5" /> },
