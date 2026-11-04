@@ -165,3 +165,43 @@ class FxRate(Base):
     quote: Mapped[str] = mapped_column(String(3))
     rate: Mapped[float]
     fetched_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class FlightOption(Base):
+    """A round-trip flight candidate or booking (searched by hand elsewhere, compared here)."""
+
+    __tablename__ = "flight_options"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), index=True)
+    label: Mapped[str]
+    total_amount: Mapped[int | None]  # all travelers, in the currency's major unit
+    currency: Mapped[str] = mapped_column(String(3))
+    baggage_note: Mapped[str | None]
+    booking_url: Mapped[str | None]
+    note: Mapped[str | None]
+    status: Mapped[str] = mapped_column(default="candidate")  # candidate | booked
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+    legs: Mapped[list["FlightLeg"]] = relationship(
+        back_populates="option", cascade="all, delete-orphan", order_by="FlightLeg.dep_at"
+    )
+
+
+class FlightLeg(Base):
+    """One flight segment. Times are stored in UTC; the airports' timezones give local time."""
+
+    __tablename__ = "flight_legs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    option_id: Mapped[int] = mapped_column(ForeignKey("flight_options.id", ondelete="CASCADE"), index=True)
+    direction: Mapped[str]  # out | back
+    seq: Mapped[int]
+    carrier: Mapped[str | None]
+    flight_no: Mapped[str | None]
+    dep_airport: Mapped[str] = mapped_column(String(3))
+    dep_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    arr_airport: Mapped[str] = mapped_column(String(3))
+    arr_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+    option: Mapped[FlightOption] = relationship(back_populates="legs")

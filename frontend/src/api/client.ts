@@ -21,6 +21,12 @@ export type StayPatch = S['StayPatch']
 export type ScoreOut = S['ScoreOut']
 export type OriginOut = S['OriginOut']
 export type FxOut = S['FxOut']
+export type AirportOut = S['AirportOut']
+export type FlightOut = S['FlightOut']
+export type FlightIn = S['FlightIn']
+export type LegIn = S['LegIn']
+export type LegOut = S['LegOut']
+export type EvaluationOut = S['EvaluationOut']
 
 export class ApiError extends Error {
   readonly status: number
@@ -63,7 +69,7 @@ export async function apiGet<T>(path: string, params: Record<string, QueryValue>
 }
 
 export async function apiSend<T>(
-  method: 'POST' | 'PATCH' | 'DELETE',
+  method: 'POST' | 'PATCH' | 'PUT' | 'DELETE',
   path: string,
   body?: unknown,
 ): Promise<T> {

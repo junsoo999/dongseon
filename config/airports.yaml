@@ -1,0 +1,16 @@
+# Airports the app can use in flight legs: IATA code, Korean name, IANA timezone.
+# Leg times are typed in each airport's local time and stored in UTC.
+airports:
+  - {code: ICN, name: 인천, timezone: Asia/Seoul}
+  - {code: GMP, name: 김포, timezone: Asia/Seoul}
+  - {code: PUS, name: 김해, timezone: Asia/Seoul}
+  - {code: CJU, name: 제주, timezone: Asia/Seoul}
+  - {code: TAE, name: 대구, timezone: Asia/Seoul}
+  - {code: CJJ, name: 청주, timezone: Asia/Seoul}
+  - {code: HND, name: 하네다, timezone: Asia/Tokyo}
+  - {code: NRT, name: 나리타, timezone: Asia/Tokyo}
+  - {code: KIX, name: 간사이, timezone: Asia/Tokyo}
+  - {code: NGO, name: 주부, timezone: Asia/Tokyo}
+  - {code: FUK, name: 후쿠오카, timezone: Asia/Tokyo}
+  - {code: CTS, name: 신치토세, timezone: Asia/Tokyo}
+  - {code: OKA, name: 나하, timezone: Asia/Tokyo}
