@@ -44,6 +44,7 @@ def api(tmp_path: Path) -> Iterator["ApiHarness"]:
         _env_file=None,  # pyright: ignore[reportCallIssue]
         database_path=str(db),
         lock_dir=str(tmp_path / "locks"),
+        profile_path=str(EXAMPLE_PROFILE),  # never the household's real profile
         google_maps_server_key="test-key",
     )
     app.dependency_overrides[get_settings] = lambda: settings

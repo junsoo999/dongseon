@@ -114,10 +114,31 @@ class IgnavClient:
         return_: date,
         *,
         adults: int,
+        children: int = 0,
         market: str = "KR",
         max_stops: int | None = 0,
+        checked_bags: int | None = None,
+        departure_hours: tuple[int | None, int | None] = (None, None),
+        return_hours: tuple[int | None, int | None] = (None, None),
+        max_price: int | None = None,
+        airlines_exclude: list[str] | None = None,
     ) -> list[Fare]:
         """Search round-trip fares (one credit).
+
+        Args:
+            origin: Departure airport (IATA).
+            destination: Arrival airport (IATA).
+            departure: Outbound date.
+            return_: Return date.
+            adults: Adult travelers.
+            children: Child travelers.
+            market: Market (sets the currency; KR = KRW).
+            max_stops: Stops per direction (0 = direct, None = any).
+            checked_bags: Checked bags for the whole party (None = no preference).
+            departure_hours: Earliest/latest outbound departure hour, local time.
+            return_hours: Earliest/latest return departure hour, local time.
+            max_price: Upper price bound in the market currency.
+            airlines_exclude: Carrier codes to leave out.
 
         Raises:
             IgnavError: On an error response.
@@ -128,10 +149,22 @@ class IgnavClient:
             "departure_date": departure.isoformat(),
             "return_date": return_.isoformat(),
             "adults": adults,
+            "children": children,
             "market": market,
+            "max_stops": max_stops,
         }
-        if max_stops is not None:
-            body["max_stops"] = max_stops
+        if checked_bags:
+            body["checked_bags"] = checked_bags
+        for key, (earliest, latest) in (
+            ("departure_time_range", departure_hours),
+            ("return_time_range", return_hours),
+        ):
+            if earliest is not None or latest is not None:
+                body[key] = {"earliest_hour": earliest, "latest_hour": latest}
+        if max_price is not None:
+            body["max_price"] = max_price
+        if airlines_exclude:
+            body["airlines_exclude"] = airlines_exclude
         resp = self._post("/fares/round-trip", body)
         if not resp.is_success:
             raise IgnavError(f"{resp.status_code}: {resp.text[:200]}")

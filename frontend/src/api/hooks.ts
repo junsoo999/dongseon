@@ -22,6 +22,8 @@ import {
   type SearchLinksOut,
   type FaresOut,
   type HotelsOut,
+  type FarePrefsIO,
+  type FarePrefsOut,
   type SuggestionOut,
   type TripIn,
   type TripOut,
@@ -310,5 +312,22 @@ export function useAddOffer(tripId: number | null, kind: 'fares' | 'hotels') {
       for (const key of ['flights', 'stays', 'stayScore'])
         void qc.invalidateQueries({ queryKey: [key, tripId] })
     },
+  })
+}
+
+export function useFarePrefs(tripId: number | null) {
+  return useQuery({
+    queryKey: ['farePrefs', tripId],
+    queryFn: () => apiGet<FarePrefsOut>(`/trips/${tripId}/fare-prefs`),
+    enabled: tripId !== null,
+  })
+}
+
+export function useSaveFarePrefs(tripId: number | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: FarePrefsIO) =>
+      apiSend<FarePrefsOut>('PUT', `/trips/${tripId}/fare-prefs`, body),
+    onSuccess: (data) => qc.setQueryData(['farePrefs', tripId], data),
   })
 }

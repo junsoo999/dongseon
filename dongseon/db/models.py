@@ -298,3 +298,24 @@ class PriceSnapshot(Base):
     day: Mapped[date] = mapped_column(Date)
     min_amount: Mapped[int]
     currency: Mapped[str] = mapped_column(String(3))
+
+
+class FarePrefs(Base):
+    """Flight search conditions for a trip (unset fields fall back to the profile and city config)."""
+
+    __tablename__ = "fare_prefs"
+
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), primary_key=True)
+    adults: Mapped[int | None]
+    children: Mapped[int] = mapped_column(default=0)
+    origins_json: Mapped[str | None]  # ["ICN"]; null = profile home_airports
+    destinations_json: Mapped[str | None]  # ["HND", "NRT"]; null = city airports
+    max_stops: Mapped[int | None] = mapped_column(default=0)  # null = any
+    checked_bags: Mapped[int | None]
+    out_dep_from: Mapped[int | None]  # local hours, 0-23
+    out_dep_to: Mapped[int | None]
+    back_dep_from: Mapped[int | None]
+    back_dep_to: Mapped[int | None]
+    max_price_krw: Mapped[int | None]
+    airlines_exclude_json: Mapped[str | None]  # ["7C"]
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime())

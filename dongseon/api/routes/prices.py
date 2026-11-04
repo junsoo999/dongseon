@@ -5,7 +5,7 @@ from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select
 
 from dongseon.api.deps import HttpDep, ProfileDep, SessionDep, SettingsDep
@@ -15,8 +15,9 @@ from dongseon.api.routes.stays import build_score
 from dongseon.api.routes.trips import get_trip_or_404
 from dongseon.core.airports import load_airports
 from dongseon.core.cities import load_city
-from dongseon.db.models import FareOffer, FlightLeg, FlightOption, HotelVacancy, PriceSnapshot, Stay
+from dongseon.db.models import FareOffer, FarePrefs, FlightLeg, FlightOption, HotelVacancy, PriceSnapshot, Stay
 from dongseon.flights.evaluate import LegTimes, evaluate
+from dongseon.prices import fare_search
 from dongseon.sources.fx import get_rate
 from dongseon.sources.ignav import IgnavClient, IgnavError
 from dongseon.sources.rakuten import CREDIT_TEXT, CREDIT_URL
@@ -325,3 +326,82 @@ def price_history(trip_id: int, session: SessionDep) -> list[HistoryPoint]:
     return [
         HistoryPoint(kind=r.kind, key=r.key, day=r.day, min_amount=r.min_amount, currency=r.currency) for r in rows
     ]
+
+
+class FarePrefsIO(BaseModel):
+    """Flight search conditions. Hours are local (0-23) at the departure airport."""
+
+    adults: int = Field(ge=1, le=9)
+    children: int = Field(default=0, ge=0, le=8)
+    origins: list[str] = Field(min_length=1, max_length=3)
+    destinations: list[str] = Field(min_length=1, max_length=3)
+    max_stops: int | None = Field(default=0, ge=0, le=2)
+    checked_bags: int | None = Field(default=None, ge=0, le=9)
+    out_dep_from: int | None = Field(default=None, ge=0, le=23)
+    out_dep_to: int | None = Field(default=None, ge=0, le=23)
+    back_dep_from: int | None = Field(default=None, ge=0, le=23)
+    back_dep_to: int | None = Field(default=None, ge=0, le=23)
+    max_price_krw: int | None = Field(default=None, ge=0)
+    airlines_exclude: list[str] = Field(default_factory=list, max_length=10)
+
+    @model_validator(mode="after")
+    def _check(self) -> "FarePrefsIO":
+        for a, b in ((self.out_dep_from, self.out_dep_to), (self.back_dep_from, self.back_dep_to)):
+            if a is not None and b is not None and a > b:
+                raise ValueError("earliest hour is after latest hour")
+        return self
+
+
+class FarePrefsOut(FarePrefsIO):
+    """Saved conditions plus the airports that can be chosen."""
+
+    airport_choices: list[str]
+    saved: bool
+
+
+@router.get("/trips/{trip_id}/fare-prefs", response_model=FarePrefsOut)
+def get_fare_prefs(trip_id: int, session: SessionDep, settings: SettingsDep, profile: ProfileDep) -> FarePrefsOut:
+    """The trip's flight search conditions (profile and city defaults when nothing is saved)."""
+    trip = get_trip_or_404(session, trip_id)
+    city = load_city(settings.cities_path, trip.city_key)
+    s = fare_search(session, trip, city, profile)
+    return FarePrefsOut(
+        adults=s.adults,
+        children=s.children,
+        origins=s.origins,
+        destinations=s.destinations,
+        max_stops=s.max_stops,
+        checked_bags=s.checked_bags,
+        out_dep_from=s.out_hours[0],
+        out_dep_to=s.out_hours[1],
+        back_dep_from=s.back_hours[0],
+        back_dep_to=s.back_hours[1],
+        max_price_krw=s.max_price_krw,
+        airlines_exclude=s.airlines_exclude,
+        airport_choices=sorted(load_airports(settings.airports_file)),
+        saved=session.get(FarePrefs, trip.id) is not None,
+    )
+
+
+@router.put("/trips/{trip_id}/fare-prefs", response_model=FarePrefsOut)
+def put_fare_prefs(
+    trip_id: int, body: FarePrefsIO, session: SessionDep, settings: SettingsDep, profile: ProfileDep
+) -> FarePrefsOut:
+    """Save the trip's flight search conditions (used by the next price refresh)."""
+    trip = get_trip_or_404(session, trip_id)
+    known = load_airports(settings.airports_file)
+    unknown = [c for c in body.origins + body.destinations if c not in known]
+    if unknown:
+        raise HTTPException(status_code=422, detail=f"공항 목록에 없는 공항입니다: {', '.join(unknown)}")
+    p = session.get(FarePrefs, trip.id) or FarePrefs(trip_id=trip.id, updated_at=datetime.now(UTC))
+    p.adults, p.children = body.adults, body.children
+    p.origins_json, p.destinations_json = json.dumps(body.origins), json.dumps(body.destinations)
+    p.max_stops, p.checked_bags = body.max_stops, body.checked_bags
+    p.out_dep_from, p.out_dep_to = body.out_dep_from, body.out_dep_to
+    p.back_dep_from, p.back_dep_to = body.back_dep_from, body.back_dep_to
+    p.max_price_krw = body.max_price_krw
+    p.airlines_exclude_json = json.dumps([c.strip().upper() for c in body.airlines_exclude if c.strip()])
+    p.updated_at = datetime.now(UTC)
+    session.add(p)
+    session.flush()
+    return get_fare_prefs(trip_id, session, settings, profile)

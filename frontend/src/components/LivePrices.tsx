@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { FareOut, VacancyOut } from '../api/client'
-import { useAddOffer, useFares, useHotels, useJob } from '../api/hooks'
+import { useAddOffer, useFarePrefs, useFares, useHotels, useJob } from '../api/hooks'
+import { prefsChips } from '../lib/farePrefs'
+import { FarePrefsSheet } from './FarePrefsSheet'
 import { formatKrw, formatLocal, formatMoney, formatSpan } from '../lib/format'
 import { BrandIcon } from './BrandIcon'
 import { JobButton } from './JobButton'
@@ -70,8 +72,10 @@ function FareRow({ f, tripId }: { f: FareOut; tripId: number }) {
 /** Live fares (Ignav), best value per usable hour first. */
 export function LiveFares({ tripId }: { tripId: number }) {
   const fares = useFares(tripId)
+  const prefs = useFarePrefs(tripId)
   const job = useJob('prices')
   const [all, setAll] = useState(false)
+  const [editing, setEditing] = useState(false)
   const invalidate = useMemo(
     () => [
       ['fares', tripId],
@@ -85,7 +89,7 @@ export function LiveFares({ tripId }: { tripId: number }) {
     <div className="space-y-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
       <div className="flex items-center gap-2">
         <div className="min-w-0 flex-1">
-          <p className="font-semibold">실시간 운임 · 직항</p>
+          <p className="font-semibold">실시간 운임</p>
           <p className="text-xs text-gray-500">
             {fetchedLabel(fares.data?.fetched_at)}
             {fares.data?.reference_label &&
@@ -94,6 +98,23 @@ export function LiveFares({ tripId }: { tripId: number }) {
         </div>
         <JobButton name="prices" label="새로 가져오기" invalidate={invalidate} />
       </div>
+      {prefs.data && (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="flex w-full flex-wrap items-center gap-1.5 rounded-xl border border-dashed border-gray-300 bg-white p-2 text-left"
+        >
+          {prefsChips(prefs.data).map((c) => (
+            <span key={c} className="rounded-md bg-slate-100 px-2 py-0.5 text-xs text-gray-700">
+              {c}
+            </span>
+          ))}
+          <span className="ml-auto px-1 text-xs font-medium text-teal-700">조건 바꾸기</span>
+        </button>
+      )}
+      {editing && prefs.data && (
+        <FarePrefsSheet tripId={tripId} prefs={prefs.data} onClose={() => setEditing(false)} />
+      )}
       {job.data?.last_status === 'error' && job.data.last_error && (
         <p className="text-xs text-red-700">{job.data.last_error}</p>
       )}
@@ -105,7 +126,7 @@ export function LiveFares({ tripId }: { tripId: number }) {
         </ul>
       ) : (
         <p className="text-sm text-gray-500">
-          '새로 가져오기'를 누르면 인천 출발 왕복 운임을 가져옵니다.
+          '새로 가져오기'를 누르면 위 조건으로 왕복 운임을 가져옵니다.
         </p>
       )}
       {items.length > 4 && (

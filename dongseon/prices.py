@@ -14,7 +14,7 @@ from dongseon.api.routes.stays import build_score
 from dongseon.core.cities import CityConfig, StayArea
 from dongseon.core.config import Settings
 from dongseon.core.profile import Profile
-from dongseon.db.models import FareOffer, HotelVacancy, PriceSnapshot, Trip
+from dongseon.db.models import FareOffer, FarePrefs, HotelVacancy, PriceSnapshot, Trip
 from dongseon.sources.google_places import GooglePlacesClient
 from dongseon.sources.ignav import Fare, IgnavClient, IgnavError
 from dongseon.sources.rakuten import RakutenClient, RakutenError
@@ -23,6 +23,41 @@ logger = logging.getLogger(__name__)
 
 TOP_AREAS = 3
 KEEP_FARES_PER_ROUTE = 40  # cheapest first; enough to find good times without storing hundreds
+
+
+@dataclass(frozen=True)
+class FareSearch:
+    """Resolved flight search conditions for a trip."""
+
+    adults: int
+    children: int
+    origins: list[str]
+    destinations: list[str]
+    max_stops: int | None
+    checked_bags: int | None
+    out_hours: tuple[int | None, int | None]
+    back_hours: tuple[int | None, int | None]
+    max_price_krw: int | None
+    airlines_exclude: list[str]
+
+
+def fare_search(session: Session, trip: Trip, city: CityConfig, profile: Profile) -> FareSearch:
+    """The trip's saved conditions, with the profile and city config filling anything unset."""
+    p = session.get(FarePrefs, trip.id)
+    origins = json.loads(p.origins_json) if p and p.origins_json else list(profile.home_airports)
+    destinations = json.loads(p.destinations_json) if p and p.destinations_json else [a.code for a in city.airports]
+    return FareSearch(
+        adults=(p.adults if p and p.adults else max(1, len(profile.travelers))),
+        children=p.children if p else 0,
+        origins=origins,
+        destinations=destinations,
+        max_stops=p.max_stops if p else 0,
+        checked_bags=p.checked_bags if p else None,
+        out_hours=(p.out_dep_from, p.out_dep_to) if p else (None, None),
+        back_hours=(p.back_dep_from, p.back_dep_to) if p else (None, None),
+        max_price_krw=p.max_price_krw if p else None,
+        airlines_exclude=json.loads(p.airlines_exclude_json) if p and p.airlines_exclude_json else [],
+    )
 
 
 @dataclass(frozen=True)
@@ -101,7 +136,6 @@ def refresh_prices(
     places: GooglePlacesClient | None,
     ignav: IgnavClient | None,
     rakuten: RakutenClient | None,
-    max_stops: int | None = 0,
 ) -> PriceSummary:
     """Fetch fares for every home airport × city airport and vacancies around the top areas, replacing old results."""
     adults = max(1, len(profile.travelers))
@@ -110,18 +144,31 @@ def refresh_prices(
     hotels: dict[str, int] = {}
     errors: list[str] = []
     if ignav is not None:
-        for origin in profile.home_airports:
-            for airport in city.airports:
-                route = f"{origin}-{airport.code}"
+        search = fare_search(session, trip, city, profile)
+        # Routes or conditions may have changed: drop every old fare before storing the new ones.
+        session.execute(delete(FareOffer).where(FareOffer.trip_id == trip.id))
+        for origin in search.origins:
+            for dest in search.destinations:
+                route = f"{origin}-{dest}"
                 try:
                     found = ignav.round_trip(
-                        origin, airport.code, trip.start_date, trip.end_date, adults=adults, max_stops=max_stops
+                        origin,
+                        dest,
+                        trip.start_date,
+                        trip.end_date,
+                        adults=search.adults,
+                        children=search.children,
+                        max_stops=search.max_stops,
+                        checked_bags=search.checked_bags,
+                        departure_hours=search.out_hours,
+                        return_hours=search.back_hours,
+                        max_price=search.max_price_krw,
+                        airlines_exclude=search.airlines_exclude or None,
                     )
                 except (IgnavError, httpx.HTTPError, KeyError, ValueError) as e:  # keep going with other routes
                     errors.append(f"{route}: {e}")
                     continue
                 found.sort(key=lambda f: f.amount)
-                session.execute(delete(FareOffer).where(FareOffer.trip_id == trip.id, FareOffer.route == route))
                 for f in found[:KEEP_FARES_PER_ROUTE]:
                     session.add(
                         FareOffer(

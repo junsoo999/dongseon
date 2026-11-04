@@ -314,7 +314,6 @@ def scout(
 @app.command(help="실시간 가격을 가져옵니다: Ignav 항공 운임과 楽天トラベル 빈방 (끝나지 않은 여행).")
 def prices(
     trip: Annotated[int | None, typer.Option("--trip", help="이 여행만")] = None,
-    max_stops: Annotated[int, typer.Option("--max-stops", help="경유 횟수 상한 (0 = 직항)")] = 0,
 ) -> None:
     """Refresh fares and hotel vacancies for upcoming trips (one run at a time)."""
     from dongseon.core.profile import load_profile
@@ -376,7 +375,6 @@ def prices(
                         places=places,
                         ignav=ignav,
                         rakuten=rakuten,
-                        max_stops=max_stops,
                     )
                 rows += sum(summary.fares.values()) + sum(summary.hotels.values())
                 fares = ", ".join(f"{k} {v}건" for k, v in summary.fares.items()) or "없음"

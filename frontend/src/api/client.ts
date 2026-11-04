@@ -35,6 +35,8 @@ export type FareOut = S['FareOut']
 export type HotelsOut = S['HotelsOut']
 export type VacancyOut = S['VacancyOut']
 export type HistoryPoint = S['HistoryPoint']
+export type FarePrefsIO = S['FarePrefsIO']
+export type FarePrefsOut = S['FarePrefsOut']
 
 export class ApiError extends Error {
   readonly status: number

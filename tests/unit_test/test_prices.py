@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import UTC, date, datetime
 
 import httpx
 import respx
@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from dongseon.core.cities import load_city
 from dongseon.core.profile import load_profile
-from dongseon.db.models import FlightOption, PriceSnapshot, Stay, Trip
+from dongseon.db.models import FareOffer, FlightOption, PriceSnapshot, Stay, Trip
 from dongseon.db.session import get_engine, session_scope
 from dongseon.prices import refresh_prices
 from dongseon.sources.fx import FRANKFURTER_URL
@@ -128,3 +128,76 @@ def test_refresh_and_add_flow(api: ApiHarness) -> None:
         assert {(p.kind, p.key) for p in snaps} >= {("flight", "ICN-NRT"), ("hotel", "신주쿠")}
     history = api.client.get(f"/api/trips/{trip['id']}/price-history").json()
     assert any(h["key"] == "ICN-NRT" and h["min_amount"] == 775004 for h in history)
+
+
+@respx.mock
+def test_fare_prefs_drive_the_search(api: ApiHarness) -> None:
+    trip = api.create_trip()
+    api.settings.google_maps_server_key = ""  # area ranking is not under test here
+    url = f"/api/trips/{trip['id']}/fare-prefs"
+    defaults = api.client.get(url).json()
+    assert (defaults["adults"], defaults["origins"], defaults["destinations"], defaults["saved"]) == (
+        2,
+        ["ICN", "GMP"],
+        ["HND", "NRT"],
+        False,
+    )
+    bad = {**defaults, "out_dep_from": 12, "out_dep_to": 8}
+    assert api.client.put(url, json=bad).status_code == 422
+    assert api.client.put(url, json={**defaults, "origins": ["XXX"]}).status_code == 422
+    prefs = {
+        **defaults,
+        "adults": 3,
+        "children": 1,
+        "origins": ["ICN"],
+        "destinations": ["HND"],
+        "max_stops": 1,
+        "checked_bags": 2,
+        "out_dep_from": 6,
+        "out_dep_to": 12,
+        "back_dep_from": 15,
+        "back_dep_to": None,
+        "max_price_krw": 900000,
+        "airlines_exclude": [" 7c "],
+    }
+    saved = api.client.put(url, json=prefs).json()
+    assert saved["saved"] is True and saved["airlines_exclude"] == ["7C"]
+
+    route = respx.post(f"{IGNAV}/fares/round-trip").respond(json=FARES)
+    eng = get_engine(api.db)
+    with session_scope(eng) as s, httpx.Client() as http:
+        t = s.get(Trip, trip["id"])
+        assert t is not None
+        s.add(
+            FareOffer(
+                trip_id=t.id,
+                route="GMP-NRT",
+                ignav_id="old",
+                amount=1,
+                currency="KRW",
+                out_carrier=None,
+                in_carrier=None,
+                legs_json="[]",
+                fetched_at=datetime.now(UTC),
+            )
+        )
+        s.flush()
+        summary = refresh_prices(
+            s,
+            trip=t,
+            city=load_city(CITIES, "tokyo"),
+            profile=load_profile(EXAMPLE_PROFILE),
+            settings=api.settings,
+            http=http,
+            places=None,
+            ignav=IgnavClient(http, "k"),
+            rakuten=None,
+        )
+    assert list(summary.fares) == ["ICN-HND"]
+    body = json.loads(route.calls.last.request.content)
+    assert body["adults"] == 3 and body["children"] == 1 and body["max_stops"] == 1 and body["checked_bags"] == 2
+    assert body["departure_time_range"] == {"earliest_hour": 6, "latest_hour": 12}
+    assert body["return_time_range"] == {"earliest_hour": 15, "latest_hour": None}
+    assert body["max_price"] == 900000 and body["airlines_exclude"] == ["7C"]
+    routes = {f["route"] for f in api.client.get(f"/api/trips/{trip['id']}/fares").json()["items"]}
+    assert routes == {"ICN-HND"}  # the stale GMP-NRT fare was replaced
