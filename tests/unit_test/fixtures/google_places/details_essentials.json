@@ -1,0 +1,12 @@
+{
+  "id": "ChIJY4HWjseLGGARIBjdW6fAwYs",
+  "types": [
+    "market",
+    "point_of_interest",
+    "establishment"
+  ],
+  "location": {
+    "latitude": 35.6000001,
+    "longitude": 139.7000001
+  }
+}

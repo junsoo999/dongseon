@@ -5,6 +5,7 @@ in ``api_usage`` and raises :class:`FreeTierExceededError` instead when the call
 """
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal
@@ -130,3 +131,18 @@ def month_usage(
         )
         for sku, cap in tier.monthly_free.items()
     ]
+
+
+def make_meter(session: Session, tier: FreeTier, *, warn_ratio: float, stop_ratio: float) -> Callable[[str], None]:
+    """Return a meter that counts each call in ``session`` and commits right away.
+
+    Committing per call keeps calls that Google already billed even if the caller fails later. It uses the
+    caller's session because SQLite allows one writer: a second connection would wait on the caller's lock.
+    The commit also persists the caller's pending writes, which every caller here tolerates.
+    """
+
+    def meter(sku: str) -> None:
+        meter_call(session, tier, sku, warn_ratio=warn_ratio, stop_ratio=stop_ratio)
+        session.commit()
+
+    return meter

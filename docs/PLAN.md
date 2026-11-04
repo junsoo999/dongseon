@@ -237,7 +237,7 @@ dongseon/
 3. Takeout 가져오기: `Takeout/Saved/*.csv`를 올리면 리스트 이름은 태그, Title은 라벨, Note는 메모로 넣고 URL로 place_id를 찾습니다. 해석에 실패하면 `resolve_status=failed`로 남기고 화면에서 수동 매칭합니다. 대량 해석은 백그라운드 CLI 잡으로 돌립니다.
 4. AI 추천: 13절 맛집 조사 결과를 `priority=maybe`, `added_by=ai`로 넣습니다.
 
-Google `primaryType`(추가할 때 한 번 조회)은 `config/defaults.yaml`의 매핑으로 앱 카테고리(food / cafe / bar / sight / museum / shopping / experience 등)에 대응시키고, 사용자가 바꿀 수 있습니다. 카테고리별 기본 체류시간도 defaults에 둡니다.
+Google `types`(추가할 때 한 번 조회. Place Details에서 `types`는 Essentials, `primaryType`은 Pro라서 `types`를 씀)는 `config/defaults.yaml`의 매핑으로 앱 카테고리(food / cafe / bar / sight / museum / shopping / experience 등)에 대응시키고, 사용자가 바꿀 수 있습니다. 카테고리별 기본 체류시간도 defaults에 둡니다.
 
 ---
 

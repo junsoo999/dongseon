@@ -44,10 +44,241 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/cities': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Cities
+     * @description List configured cities.
+     */
+    get: operations['cities_api_cities_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List Trips
+     * @description List trips, upcoming first.
+     */
+    get: operations['list_trips_api_trips_get']
+    put?: never
+    /**
+     * Create Trip
+     * @description Create a trip in a configured city.
+     */
+    post: operations['create_trip_api_trips_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Trip
+     * @description Return one trip.
+     */
+    get: operations['get_trip_api_trips__trip_id__get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    /**
+     * Patch Trip
+     * @description Update trip fields.
+     */
+    patch: operations['patch_trip_api_trips__trip_id__patch']
+    trace?: never
+  }
+  '/api/categories': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Categories
+     * @description List app categories with default dwell minutes.
+     */
+    get: operations['categories_api_categories_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/places/autocomplete': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Autocomplete
+     * @description Suggest places in the trip's country (counted against the Autocomplete free tier).
+     */
+    get: operations['autocomplete_api_places_autocomplete_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/places/resolve-url': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Resolve Url Route
+     * @description Resolve a pasted Google Maps URL (short links included) to a place ID.
+     */
+    post: operations['resolve_url_route_api_places_resolve_url_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/pins': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List Pins
+     * @description List a trip's pins with cached coordinates (fetching expired ones when the key is set).
+     */
+    get: operations['list_pins_api_trips__trip_id__pins_get']
+    put?: never
+    /**
+     * Create Pin
+     * @description Add a place to a trip (one Essentials details call for a new Google place).
+     */
+    post: operations['create_pin_api_trips__trip_id__pins_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/pins/{pin_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete Pin
+     * @description Remove a pin from a trip (the place itself is kept for other trips).
+     */
+    delete: operations['delete_pin_api_trips__trip_id__pins__pin_id__delete']
+    options?: never
+    head?: never
+    /**
+     * Patch Pin
+     * @description Edit a pin, its place's label/category/memo, or manually match a pending place.
+     */
+    patch: operations['patch_pin_api_trips__trip_id__pins__pin_id__patch']
+    trace?: never
+  }
+  '/api/jobs/{name}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Job Status
+     * @description Report a job's state.
+     */
+    get: operations['job_status_api_jobs__name__get']
+    put?: never
+    /**
+     * Start Job
+     * @description Start a job in the background; 409 when it is already running.
+     */
+    post: operations['start_job_api_jobs__name__post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
   schemas: {
+    /**
+     * CategoryOut
+     * @description An app category and its default dwell minutes.
+     */
+    CategoryOut: {
+      /** Key */
+      key: string
+      /** Dwell Min */
+      dwell_min: number
+    }
+    /**
+     * CityOut
+     * @description A configured city.
+     */
+    CityOut: {
+      /** Key */
+      key: string
+      /** Name */
+      name: string
+      /** Country */
+      country: string
+      /** Timezone */
+      timezone: string
+      /** Currency */
+      currency: string
+    }
+    /** HTTPValidationError */
+    HTTPValidationError: {
+      /** Detail */
+      detail?: components['schemas']['ValidationError'][]
+    }
     /**
      * HealthResponse
      * @description Server status and configuration summary.
@@ -69,6 +300,140 @@ export interface components {
       }
     }
     /**
+     * JobStatus
+     * @description Whether a job is running and how its last run ended.
+     */
+    JobStatus: {
+      /** Name */
+      name: string
+      /** Running */
+      running: boolean
+      /** Last Status */
+      last_status: string | null
+      /** Last Ran At */
+      last_ran_at: string | null
+      /** Last Rows */
+      last_rows: number | null
+      /** Last Error */
+      last_error: string | null
+    }
+    /**
+     * PinCreate
+     * @description Add a place to a trip. Without ``google_place_id`` the place is kept as pending for manual matching.
+     */
+    PinCreate: {
+      /** Google Place Id */
+      google_place_id?: string | null
+      /** Label */
+      label: string
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: 'search' | 'url'
+      /** Source Ref */
+      source_ref?: string | null
+      /** Session Token */
+      session_token?: string | null
+    }
+    /**
+     * PinOut
+     * @description A pin with its place. ``lat``/``lng`` come from the 30-day coordinate cache and may be null.
+     */
+    PinOut: {
+      /** Id */
+      id: number
+      /** Place Id */
+      place_id: number
+      /** Google Place Id */
+      google_place_id: string | null
+      /** Label */
+      label: string
+      /** Category */
+      category: string
+      /** User Note */
+      user_note: string | null
+      /** Tag */
+      tag: string | null
+      /** Source */
+      source: string
+      /** Resolve Status */
+      resolve_status: string
+      /** Priority */
+      priority: string
+      /** Dwell Min */
+      dwell_min: number
+      /** Meal */
+      meal: string | null
+      /** Locked Date */
+      locked_date: string | null
+      /** Note */
+      note: string | null
+      /** Added By */
+      added_by: string
+      /** Lat */
+      lat: number | null
+      /** Lng */
+      lng: number | null
+    }
+    /**
+     * PinPatch
+     * @description Editable pin and place fields (label, category and memo belong to the place).
+     */
+    PinPatch: {
+      /** Priority */
+      priority?: ('must' | 'want' | 'maybe') | null
+      /** Dwell Min */
+      dwell_min?: number | null
+      /** Meal */
+      meal?: ('lunch' | 'dinner') | null
+      /**
+       * Clear Meal
+       * @default false
+       */
+      clear_meal: boolean
+      /** Note */
+      note?: string | null
+      /** Locked Date */
+      locked_date?: string | null
+      /**
+       * Clear Locked Date
+       * @default false
+       */
+      clear_locked_date: boolean
+      /** Label */
+      label?: string | null
+      /** Category */
+      category?: string | null
+      /**
+       * Google Place Id
+       * @description manual match for a pending or failed place
+       */
+      google_place_id?: string | null
+    }
+    /**
+     * ResolveUrlIn
+     * @description A pasted Google Maps URL.
+     */
+    ResolveUrlIn: {
+      /** Trip Id */
+      trip_id: number
+      /** Url */
+      url: string
+    }
+    /**
+     * ResolveUrlOut
+     * @description URL resolution result; ``label_hint`` comes from the URL text.
+     */
+    ResolveUrlOut: {
+      /** Google Place Id */
+      google_place_id: string | null
+      /** Label Hint */
+      label_hint: string | null
+      /** Reason */
+      reason: string | null
+    }
+    /**
      * SkuUsageOut
      * @description One SKU's calls this month against its free cap (``cap`` is null when Google sets none).
      */
@@ -84,6 +449,92 @@ export interface components {
        * @enum {string}
        */
       level: 'ok' | 'warn' | 'stop'
+    }
+    /**
+     * SuggestionOut
+     * @description One autocomplete suggestion (display only; show the Google Maps attribution next to the list).
+     */
+    SuggestionOut: {
+      /** Google Place Id */
+      google_place_id: string
+      /** Main Text */
+      main_text: string
+      /** Secondary Text */
+      secondary_text: string
+    }
+    /**
+     * TripIn
+     * @description A new trip.
+     */
+    TripIn: {
+      /** Title */
+      title: string
+      /** City Key */
+      city_key: string
+      /**
+       * Start Date
+       * Format: date
+       */
+      start_date: string
+      /**
+       * End Date
+       * Format: date
+       */
+      end_date: string
+      /**
+       * Pace
+       * @default normal
+       * @enum {string}
+       */
+      pace: 'relaxed' | 'normal' | 'packed'
+    }
+    /**
+     * TripOut
+     * @description A trip with its pin count.
+     */
+    TripOut: {
+      /** Id */
+      id: number
+      /** Title */
+      title: string
+      /** City Key */
+      city_key: string
+      /** City Name */
+      city_name: string
+      /**
+       * Start Date
+       * Format: date
+       */
+      start_date: string
+      /**
+       * End Date
+       * Format: date
+       */
+      end_date: string
+      /** Timezone */
+      timezone: string
+      /** Pace */
+      pace: string
+      /** Status */
+      status: string
+      /** Pin Count */
+      pin_count: number
+    }
+    /**
+     * TripPatch
+     * @description Editable trip fields.
+     */
+    TripPatch: {
+      /** Title */
+      title?: string | null
+      /** Start Date */
+      start_date?: string | null
+      /** End Date */
+      end_date?: string | null
+      /** Pace */
+      pace?: ('relaxed' | 'normal' | 'packed') | null
+      /** Status */
+      status?: ('planning' | 'done') | null
     }
     /**
      * UsageResponse
@@ -105,6 +556,19 @@ export interface components {
       caps_source_url: string
       /** Skus */
       skus: components['schemas']['SkuUsageOut'][]
+    }
+    /** ValidationError */
+    ValidationError: {
+      /** Location */
+      loc: (string | number)[]
+      /** Message */
+      msg: string
+      /** Error Type */
+      type: string
+      /** Input */
+      input?: unknown
+      /** Context */
+      ctx?: Record<string, never>
     }
   }
   responses: never
@@ -151,6 +615,425 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['UsageResponse']
+        }
+      }
+    }
+  }
+  cities_api_cities_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CityOut'][]
+        }
+      }
+    }
+  }
+  list_trips_api_trips_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TripOut'][]
+        }
+      }
+    }
+  }
+  create_trip_api_trips_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TripIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TripOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  get_trip_api_trips__trip_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TripOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  patch_trip_api_trips__trip_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TripPatch']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TripOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  categories_api_categories_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CategoryOut'][]
+        }
+      }
+    }
+  }
+  autocomplete_api_places_autocomplete_get: {
+    parameters: {
+      query: {
+        trip_id: number
+        q: string
+        session_token: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SuggestionOut'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  resolve_url_route_api_places_resolve_url_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ResolveUrlIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ResolveUrlOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  list_pins_api_trips__trip_id__pins_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PinOut'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_pin_api_trips__trip_id__pins_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PinCreate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PinOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_pin_api_trips__trip_id__pins__pin_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+        pin_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  patch_pin_api_trips__trip_id__pins__pin_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+        pin_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PinPatch']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PinOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  job_status_api_jobs__name__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        name: 'places-resolve'
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['JobStatus']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  start_job_api_jobs__name__post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        name: 'places-resolve'
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['JobStatus']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
         }
       }
     }
