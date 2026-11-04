@@ -3,6 +3,7 @@ import { Layout } from './components/Layout'
 import { Home } from './pages/Home'
 import { More } from './pages/More'
 import { Placeholder } from './pages/Placeholder'
+import { Places } from './pages/Places'
 import { Settings } from './pages/Settings'
 
 export const routes = [
@@ -11,7 +12,7 @@ export const routes = [
     element: <Layout />,
     children: [
       { index: true, element: <Home /> },
-      { path: 'places', element: <Placeholder title="장소" milestone="M1" /> },
+      { path: 'places', element: <Places /> },
       { path: 'stays', element: <Placeholder title="숙소" milestone="M2" /> },
       { path: 'flights', element: <Placeholder title="항공" milestone="M2" /> },
       { path: 'itinerary', element: <Placeholder title="일정" milestone="M3" /> },

@@ -4,6 +4,17 @@ type S = components['schemas']
 export type HealthResponse = S['HealthResponse']
 export type UsageResponse = S['UsageResponse']
 export type SkuUsageOut = S['SkuUsageOut']
+export type CityOut = S['CityOut']
+export type TripOut = S['TripOut']
+export type TripIn = S['TripIn']
+export type TripPatch = S['TripPatch']
+export type CategoryOut = S['CategoryOut']
+export type SuggestionOut = S['SuggestionOut']
+export type ResolveUrlOut = S['ResolveUrlOut']
+export type PinOut = S['PinOut']
+export type PinCreate = S['PinCreate']
+export type PinPatch = S['PinPatch']
+export type JobStatus = S['JobStatus']
 
 export class ApiError extends Error {
   readonly status: number
@@ -27,11 +38,21 @@ export function toQuery(params: Record<string, QueryValue>): string {
   return s ? `?${s}` : ''
 }
 
+/** Build an ApiError from a failed response, preferring the server's Korean `detail` message. */
+async function toError(resp: Response): Promise<ApiError> {
+  let message = `${resp.status} ${resp.statusText}`
+  try {
+    const body = (await resp.json()) as { detail?: unknown }
+    if (typeof body.detail === 'string') message = body.detail
+  } catch {
+    // not JSON
+  }
+  return new ApiError(resp.status, message)
+}
+
 export async function apiGet<T>(path: string, params: Record<string, QueryValue> = {}): Promise<T> {
   const resp = await fetch(`/api${path}${toQuery(params)}`)
-  if (!resp.ok) {
-    throw new ApiError(resp.status, `${resp.status} ${resp.statusText}`)
-  }
+  if (!resp.ok) throw await toError(resp)
   return (await resp.json()) as T
 }
 
@@ -45,8 +66,6 @@ export async function apiSend<T>(
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
-  if (!resp.ok) {
-    throw new ApiError(resp.status, `${resp.status} ${resp.statusText}`)
-  }
+  if (!resp.ok) throw await toError(resp)
   return (resp.status === 204 ? undefined : await resp.json()) as T
 }

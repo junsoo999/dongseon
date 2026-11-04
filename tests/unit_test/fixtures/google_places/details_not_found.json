@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": 400,
+    "message": "The provided Place ID: ChIJ_invalid_xxx is not valid.\n",
+    "status": "INVALID_ARGUMENT"
+  }
+}

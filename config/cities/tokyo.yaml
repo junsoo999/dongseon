@@ -4,6 +4,8 @@ country: JP
 region_code: JP  # Places API regionCode
 timezone: Asia/Tokyo
 currency: JPY
+# Initial map center before any pin exists (around Tokyo Station; not Google data)
+center: {lat: 35.681, lng: 139.767}
 airports:
   - {code: HND, query: "Haneda Airport"}
   - {code: NRT, query: "Narita International Airport"}

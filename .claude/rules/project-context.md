@@ -66,11 +66,11 @@ dongseon/                           # repo root (uv project)
 | # | Scope | Status |
 |---|---|---|
 | M0 | Scaffold, ports 8100/8101/5174, `/api/health`, React app, rules, CI, `docs/google-terms.md`, `api_usage` meter, remote access | done |
-| M1 | Trips and places: Places search/autocomplete, URL paste, Takeout import + resolution, pins, Google map + list | |
+| M1 | Trips and places: Places search/autocomplete, URL paste, pins, Google map + list | in review |
 | M2 | Stays and flights: travel-time matrices, neighborhood scores, stay comparison, flight evaluation | |
 | M3 | Itinerary: per-date hours windows, OR-Tools solver, validator, timeline + map, edit/lock/re-solve, versions | |
 | M4 | AI: claude_cli, plan_review, rain_plan, food/hours/stay research, booking_parse, suggestion flow | |
 | M5 | Trip mode: today screen, weather/FX, D-7 hours refresh, daily + launchd, remote access, PWA offline, exports | |
-| M6 | (optional) spending log, retrospective, paid flight/stay adapters, other cities | |
+| M6 | (optional) Takeout saved-list import (moved from M1), spending log, retrospective, paid flight/stay adapters, other cities | |
 
 Update the status column when a milestone is accepted.

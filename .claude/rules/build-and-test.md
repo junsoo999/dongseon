@@ -97,6 +97,9 @@ uv run --no-sync dongseon --help
 uv run --no-sync dongseon info
 uv run --no-sync dongseon openapi | head
 uv run --no-sync dongseon usage
+uv run --no-sync dongseon trip create --city tokyo --start 2030-12-28 --end 2031-01-01 --title "테스트"
+uv run --no-sync dongseon trip list
+uv run --no-sync dongseon places resolve [--trip <id>] [--retry-failed]
 ```
 
 ## Daily job, always-on app, remote access (M5)

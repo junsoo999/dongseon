@@ -1,0 +1,182 @@
+{
+  "suggestions": [
+    {
+      "placePrediction": {
+        "place": "places/ChIJY4HWjseLGGARIBjdW6fAwYs",
+        "placeId": "ChIJY4HWjseLGGARIBjdW6fAwYs",
+        "text": {
+          "text": "가짜구 가짜동 1 가짜 장소 1",
+          "matches": [
+            {
+              "startOffset": 10,
+              "endOffset": 12
+            }
+          ]
+        },
+        "structuredFormat": {
+          "mainText": {
+            "text": "가짜 장소 1",
+            "matches": [
+              {
+                "endOffset": 2
+              }
+            ]
+          },
+          "secondaryText": {
+            "text": "가짜구 가짜동 1"
+          }
+        },
+        "types": [
+          "market",
+          "point_of_interest",
+          "establishment"
+        ]
+      }
+    },
+    {
+      "placePrediction": {
+        "place": "places/ChIJdRSJLN-LGGARhbFoEyqUCgo",
+        "placeId": "ChIJdRSJLN-LGGARhbFoEyqUCgo",
+        "text": {
+          "text": "가짜구 가짜동 2 가짜 장소 2",
+          "matches": [
+            {
+              "startOffset": 10,
+              "endOffset": 12
+            }
+          ]
+        },
+        "structuredFormat": {
+          "mainText": {
+            "text": "가짜 장소 2",
+            "matches": [
+              {
+                "endOffset": 2
+              }
+            ]
+          },
+          "secondaryText": {
+            "text": "가짜구 가짜동 2"
+          }
+        },
+        "types": [
+          "sublocality_level_2",
+          "geocode",
+          "sublocality",
+          "political"
+        ]
+      }
+    },
+    {
+      "placePrediction": {
+        "place": "places/ChIJV564jEeRQTUROlPTiY4uL7M",
+        "placeId": "ChIJV564jEeRQTUROlPTiY4uL7M",
+        "text": {
+          "text": "가짜구 가짜동 3 가짜 장소 3",
+          "matches": [
+            {
+              "startOffset": 10,
+              "endOffset": 12
+            }
+          ]
+        },
+        "structuredFormat": {
+          "mainText": {
+            "text": "가짜 장소 3",
+            "matches": [
+              {
+                "endOffset": 2
+              }
+            ]
+          },
+          "secondaryText": {
+            "text": "가짜구 가짜동 3"
+          }
+        },
+        "types": [
+          "bar",
+          "restaurant",
+          "food",
+          "establishment",
+          "japanese_restaurant",
+          "meal_takeaway",
+          "fast_food_restaurant",
+          "point_of_interest",
+          "japanese_izakaya_restaurant"
+        ]
+      }
+    },
+    {
+      "placePrediction": {
+        "place": "places/ChIJs-ytIN-LGGARYkv5Ukg3HUc",
+        "placeId": "ChIJs-ytIN-LGGARYkv5Ukg3HUc",
+        "text": {
+          "text": "가짜구 가짜동 4 가짜 장소 4",
+          "matches": [
+            {
+              "startOffset": 10,
+              "endOffset": 12
+            }
+          ]
+        },
+        "structuredFormat": {
+          "mainText": {
+            "text": "가짜 장소 4",
+            "matches": [
+              {
+                "endOffset": 2
+              }
+            ]
+          },
+          "secondaryText": {
+            "text": "가짜구 가짜동 4"
+          }
+        },
+        "types": [
+          "food",
+          "seafood_restaurant",
+          "establishment",
+          "point_of_interest",
+          "restaurant",
+          "japanese_restaurant",
+          "sushi_restaurant"
+        ]
+      }
+    },
+    {
+      "placePrediction": {
+        "place": "places/ChIJCwTxGnuJGGARMn4j3h6M0fk",
+        "placeId": "ChIJCwTxGnuJGGARMn4j3h6M0fk",
+        "text": {
+          "text": "가짜구 가짜동 5 가짜 장소 5",
+          "matches": [
+            {
+              "startOffset": 10,
+              "endOffset": 12
+            }
+          ]
+        },
+        "structuredFormat": {
+          "mainText": {
+            "text": "가짜 장소 5",
+            "matches": [
+              {
+                "endOffset": 2
+              }
+            ]
+          },
+          "secondaryText": {
+            "text": "가짜구 가짜동 5"
+          }
+        },
+        "types": [
+          "point_of_interest",
+          "japanese_restaurant",
+          "restaurant",
+          "food",
+          "establishment"
+        ]
+      }
+    }
+  ]
+}

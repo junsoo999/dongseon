@@ -52,7 +52,8 @@ alwaysApply: true
 - Maps: Google Maps JavaScript API only; never show Google content on or near a non-Google map.
 - Attribution: Google content shown without a Google map carries the Google Maps logo (or `Google Maps` text) in the
   same container, plus any `attributions[]` providers.
-- Usage: every billable call goes through `dongseon.core.usage.meter_call()` first. Caps live in `config/defaults.yaml`;
+- Usage: every billable call goes through a meter (`dongseon.core.usage.make_meter()`, which commits each count in the
+  caller's session because SQLite has one writer) before it is sent. Caps live in `config/defaults.yaml`;
   calls stop at `GOOGLE_FREE_TIER_STOP_RATIO`. Use the cheapest FieldMask (IDs Only, then Essentials) and request
   Enterprise fields (opening hours) only for must/want pins on the days they are needed. Note each field's SKU next to the
   FieldMask constant.
@@ -60,6 +61,8 @@ alwaysApply: true
 ## Other external APIs
 
 - Never guess response fields. Capture one real response into `tests/unit_test/fixtures/`, then write the parser against it.
+- Google fixtures keep the captured structure but replace names, addresses and coordinates with fake values (place IDs
+  may stay), so the repo stores no Google Maps Content. See `tests/unit_test/fixtures/google_places/README.md`.
 - If the required API key is missing from `.env`, stop and ask the user.
 - Check terms before integrating a service. Not used, by design: flight search APIs (Amadeus Self-Service ended
   2026-07-17), hotel partner APIs, Tabelog, Naver blogs and booking-site screens (deep links only).
