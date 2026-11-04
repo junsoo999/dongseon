@@ -1,5 +1,6 @@
 import { useHealth, useUsage } from '../api/hooks'
 import { capShare } from '../lib/format'
+import { Page } from '../components/MapLayout'
 
 const KEY_LABELS: Record<string, string> = {
   google_maps_server: 'Google 서버 키',
@@ -18,7 +19,7 @@ export function Settings() {
   const usage = useUsage()
 
   return (
-    <section className="space-y-6">
+    <Page>
       <h1 className="text-xl font-bold">설정</h1>
 
       <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -75,6 +76,6 @@ export function Settings() {
           </p>
         )}
       </div>
-    </section>
+    </Page>
   )
 }

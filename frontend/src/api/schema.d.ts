@@ -541,6 +541,8 @@ export interface components {
     AreaLinksOut: {
       /** Area */
       area: string
+      /** Emoji */
+      emoji: string | null
       /** Rank */
       rank: number | null
       /** Links */
@@ -824,6 +826,8 @@ export interface components {
       id: string
       /** Label */
       label: string
+      /** Emoji */
+      emoji: string | null
       /** Lat */
       lat: number | null
       /** Lng */

@@ -78,11 +78,19 @@ export function StaysMap({
             onClick={() => onSelect(o.id)}
             zIndex={o.rank !== null ? 100 - o.rank : 0}
           >
-            <span
-              className={`flex h-7 min-w-7 items-center justify-center px-1.5 text-xs font-bold text-white shadow ${o.kind === 'stay' ? 'rounded-md' : 'rounded-full'}`}
-              style={{ background: rankColor(o.rank, ranked) }}
-            >
-              {o.rank ?? '–'}
+            <span className="flex items-center gap-1 rounded-full bg-white py-0.5 pr-2.5 pl-0.5 shadow-md ring-1 ring-black/5">
+              <span
+                className="flex size-6 items-center justify-center rounded-full text-xs font-bold text-white"
+                style={{ background: rankColor(o.rank, ranked) }}
+              >
+                {o.rank ?? '–'}
+              </span>
+              <span className="text-base leading-none">
+                {o.emoji ?? (o.kind === 'stay' ? '🏠' : '📍')}
+              </span>
+              <span className="max-w-24 truncate text-xs font-semibold text-gray-800">
+                {o.label}
+              </span>
             </span>
           </AdvancedMarker>
         ))}

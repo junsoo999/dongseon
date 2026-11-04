@@ -54,6 +54,7 @@ class AreaLinksOut(BaseModel):
     """Booking-site searches for one area."""
 
     area: str
+    emoji: str | None
     rank: int | None
     links: list[LinkOut]
 
@@ -206,6 +207,7 @@ def search_links(
     stays = [
         AreaLinksOut(
             area=a.label,
+            emoji=a.emoji,
             rank=ranks.get(a.label),
             links=[
                 LinkOut(site=lk.site, label=lk.label, url=lk.url)

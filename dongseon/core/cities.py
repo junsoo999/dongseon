@@ -32,6 +32,7 @@ class StayArea(BaseModel):
     label: str
     query: str
     search_name: str | None = None  # English area name for booking-site search links
+    emoji: str | None = None  # shown on map markers and lists
 
 
 class HolidayPeriod(BaseModel):

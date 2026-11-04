@@ -27,8 +27,8 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 
 export function Layout() {
   return (
-    <div className="min-h-dvh bg-gray-50 pb-16 text-gray-900 tabular-nums md:pb-0">
-      <header className="hidden items-center gap-6 border-b border-gray-200 bg-white px-6 py-3 md:flex">
+    <div className="flex min-h-dvh flex-col bg-gray-50 pb-16 text-gray-900 tabular-nums md:h-dvh md:pb-0">
+      <header className="hidden shrink-0 items-center gap-6 border-b border-gray-200 bg-white px-6 py-3 md:flex">
         <NavLink to="/" className="flex items-center gap-2 text-lg font-extrabold tracking-tight">
           <img src="/icon.svg" alt="" className="size-7 rounded-lg" />
           dongseon
@@ -45,7 +45,7 @@ export function Layout() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-5">
+      <main className="min-h-0 flex-1 md:overflow-y-auto">
         <Outlet />
       </main>
 

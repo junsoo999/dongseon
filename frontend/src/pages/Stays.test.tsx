@@ -106,7 +106,8 @@ describe('Stays', () => {
       </QueryClientProvider>,
     )
     expect(await screen.findByText('긴자')).toBeInTheDocument()
-    expect(screen.getAllByText(/하네다 45분 · 나리타 1시간 5분/)).toHaveLength(2)
+    expect(screen.getAllByText(/하네다 45분/)).toHaveLength(2)
+    expect(screen.getAllByText(/나리타 1시간 5분/)).toHaveLength(2)
     expect(screen.getByText('₩253,761')).toBeInTheDocument()
     expect(screen.getByText(/4박/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '예약 페이지' })).toHaveAttribute(

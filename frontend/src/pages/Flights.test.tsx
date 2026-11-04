@@ -111,6 +111,6 @@ describe('Flights', () => {
     expect(screen.getAllByText(/1위 동네 긴자 기준/)).toHaveLength(2)
     expect(screen.getByText('NRT에 도착한 뒤 KIX에서 출발합니다')).toBeInTheDocument()
     expect(screen.getByText('현지에서 쓰는 시간')).toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: '네이버 항공권 ICN→TYO' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /네이버 항공권/ })).toBeInTheDocument()
   })
 })

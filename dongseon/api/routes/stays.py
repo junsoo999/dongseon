@@ -103,6 +103,7 @@ class OriginOut(BaseModel):
     kind: Literal["area", "stay"]
     id: str
     label: str
+    emoji: str | None
     lat: float | None
     lng: float | None
     weighted_avg_min: int | None
@@ -319,6 +320,7 @@ def build_score(
             (hubs[f"{cfg.code}:{x.hub_label}"], x.ride_min) for x in cfg.express if f"{cfg.code}:{x.hub_label}" in hubs
         ]
         airports[cfg.code] = AirportAccess(point=coords[ref.google_place_id], express=express)
+    emojis = {a.label: a.emoji for a in city.stay_areas}
     origins: list[OriginOut] = []
     for a in areas:
         if a.kind != "stay_area":
@@ -330,6 +332,7 @@ def build_score(
                 kind="area",
                 id=f"area:{a.key}",
                 label=a.label,
+                emoji=emojis.get(a.key),
                 lat=point.lat if point else None,
                 lng=point.lng if point else None,
                 weighted_avg_min=s.weighted_avg_min if s else None,
@@ -350,6 +353,7 @@ def build_score(
                 kind="stay",
                 id=f"stay:{st.id}",
                 label=st.label,
+                emoji=None,
                 lat=out.lat,
                 lng=out.lng,
                 weighted_avg_min=s.weighted_avg_min if s else None,
