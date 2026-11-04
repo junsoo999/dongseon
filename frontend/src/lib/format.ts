@@ -33,3 +33,9 @@ export function capShare(count: number, cap: number | null | undefined): string 
   if (!cap) return '-'
   return `${Math.floor((count / cap) * 100)}%`
 }
+
+/** Whole-won amount with a currency sign, e.g. 253761 -> "₩253,761". */
+export function formatKrw(amount: number): string {
+  if (!Number.isFinite(amount)) return '-'
+  return `₩${Math.round(amount).toLocaleString('ko-KR')}`
+}

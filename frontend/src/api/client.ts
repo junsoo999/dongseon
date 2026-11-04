@@ -15,6 +15,12 @@ export type PinOut = S['PinOut']
 export type PinCreate = S['PinCreate']
 export type PinPatch = S['PinPatch']
 export type JobStatus = S['JobStatus']
+export type StayOut = S['StayOut']
+export type StayIn = S['StayIn']
+export type StayPatch = S['StayPatch']
+export type ScoreOut = S['ScoreOut']
+export type OriginOut = S['OriginOut']
+export type FxOut = S['FxOut']
 
 export class ApiError extends Error {
   readonly status: number

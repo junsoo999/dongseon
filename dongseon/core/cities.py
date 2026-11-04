@@ -8,11 +8,22 @@ import yaml
 from pydantic import BaseModel, Field, field_validator
 
 
+class ExpressLink(BaseModel):
+    """A fast airport train from a hub station, with its published fastest ride time."""
+
+    hub_label: str
+    hub_query: str
+    ride_min: int
+    name: str
+    source_url: str
+
+
 class Airport(BaseModel):
     """An airport, resolved to a Google place by its search query."""
 
     code: str
     query: str
+    express: list[ExpressLink] = Field(default_factory=list)
 
 
 class StayArea(BaseModel):
@@ -57,6 +68,19 @@ class Center(BaseModel):
     lng: float
 
 
+class Approx(BaseModel):
+    """Parameters of the straight-line travel-time approximation (see the city YAML for sources)."""
+
+    as_of: date
+    detour_factor: float
+    walk_m_per_min: float
+    walk_max_km: float
+    rail_speed_kmh: float
+    rail_speed_source_url: str
+    station_access_min: float
+    wait_min: float
+
+
 class CityConfig(BaseModel):
     """One city's static configuration."""
 
@@ -69,7 +93,7 @@ class CityConfig(BaseModel):
     center: Center | None = None
     airports: list[Airport] = Field(default_factory=list)
     stay_areas: list[StayArea] = Field(default_factory=list)
-    approx_speed_kmh: float | None = None
+    approx: Approx | None = None
     holiday_periods: list[HolidayPeriod] = Field(default_factory=list)
 
     @field_validator("timezone")

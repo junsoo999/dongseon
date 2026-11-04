@@ -8,7 +8,12 @@ currency: JPY
 center: {lat: 35.681, lng: 139.767}
 airports:
   - {code: HND, query: "Haneda Airport"}
-  - {code: NRT, query: "Narita International Airport"}
+  - code: NRT
+    query: "Narita International Airport"
+    # Express links: airport time = approx(origin -> hub) + wait + ride_min, if shorter than the direct estimate.
+    express:
+      - {hub_label: 닛포리, hub_query: "Nippori Station", ride_min: 36, name: 스카이라이너,
+         source_url: "https://www.keisei.co.jp/keisei/tetudou/skyliner/jp/skyliner/"}
 stay_areas:
   - {label: 신주쿠, query: "Shinjuku Station"}
   - {label: 시부야, query: "Shibuya Station"}
@@ -17,5 +22,15 @@ stay_areas:
   - {label: 우에노, query: "Ueno Station"}
   - {label: 아사쿠사, query: "Asakusa Station"}
   - {label: 이케부쿠로, query: "Ikebukuro Station"}
-approx_speed_kmh: null  # straight-line approximation; filled after calibrating against transit samples
+# Travel-time approximation from straight-line distance. Google Routes returns no transit routes in Japan
+# (tested 2026-11-05), so every transit time here is an estimate shown as "근사".
+approx:
+  as_of: 2026-11-05
+  detour_factor: 1.3          # assumption: path length / straight-line distance
+  walk_m_per_min: 80          # Japanese real-estate rule "徒歩1分 = 80m" (不動産の表示に関する公正競争規約施行規則)
+  walk_max_km: 1.2            # assumption: longer legs are taken by rail
+  rail_speed_kmh: 33          # Yamanote loop 34.5 km in about 60-65 min, stops included
+  rail_speed_source_url: https://trafficnews.jp/post/79719/3
+  station_access_min: 10      # assumption: walk to the station and from the station, both ends together
+  wait_min: 2                 # half of the 3-5 min daytime headway
 holiday_periods: []     # filled in M3 after re-checking sources (docs/PLAN.md section 12)

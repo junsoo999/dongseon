@@ -44,8 +44,9 @@ alwaysApply: true
 - Caching: only latitude/longitude, at most 30 days (`geo_cache`). Names, addresses, opening hours, durations and
   distances are fetched when needed and used within that request; never write them to the DB, disk, logs, fixtures
   for runtime use, or the offline cache. Store only the app's own derived results (plans, warning codes and text).
-- Travel times: solve with the coordinate-based approximation ("근사"). "확정 계산" fetches Routes for the itinerary's
-  consecutive legs, shows them, and stores nothing but warnings.
+- Travel times: Google Routes returns no transit routes in Japan (checked 2026-11-05), so transit times are the
+  straight-line approximation in `dongseon/matrix/approx.py` (parameters with sources in the city YAML), always shown
+  as "근사". Google WALK is used for walking legs at request time and never stored.
 - LLM input: user data plus code-computed abstract flags only. Never send Google-derived opening times, travel
   minutes, names, addresses or coordinates. Build every LLM payload in `dongseon/llm/payloads.py` only.
 - Offline cache: user data, `place_id`, coordinates ≤ 30 days, planned order and times, Maps URLs deep links. No map tiles.

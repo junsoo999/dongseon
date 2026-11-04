@@ -7,8 +7,9 @@ import httpx
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from dongseon.core.config import Settings, get_settings
+from dongseon.core.config import REPO_ROOT, Settings, get_settings
 from dongseon.core.defaults import Defaults, load_defaults
+from dongseon.core.profile import Profile, load_profile
 from dongseon.core.usage import make_meter
 from dongseon.db.session import get_engine, session_scope
 from dongseon.sources.google_places import GooglePlacesClient
@@ -55,3 +56,15 @@ def get_places_client(
 
 
 PlacesDep = Annotated[GooglePlacesClient, Depends(get_places_client)]
+
+
+EXAMPLE_PROFILE = REPO_ROOT / "config" / "profile.example.yaml"
+
+
+def get_profile(settings: SettingsDep) -> Profile:
+    """Load the household profile, falling back to the example values when it does not exist yet."""
+    path = settings.profile_file if settings.profile_file.exists() else EXAMPLE_PROFILE
+    return load_profile(path)
+
+
+ProfileDep = Annotated[Profile, Depends(get_profile)]
