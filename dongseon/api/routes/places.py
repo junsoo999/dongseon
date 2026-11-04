@@ -33,7 +33,7 @@ Priority = Literal["must", "want", "maybe"]
 Meal = Literal["lunch", "dinner"]
 
 
-class SuggestionOut(BaseModel):
+class AutocompleteOut(BaseModel):
     """One autocomplete suggestion (display only; show the Google Maps attribution next to the list)."""
 
     google_place_id: str
@@ -167,7 +167,7 @@ def categories(defaults: DefaultsDep) -> list[CategoryOut]:
     return [CategoryOut(key=k, dwell_min=v) for k, v in defaults.categories.dwell_min.items()]
 
 
-@router.get("/places/autocomplete", response_model=list[SuggestionOut])
+@router.get("/places/autocomplete", response_model=list[AutocompleteOut])
 def autocomplete(
     session: SessionDep,
     settings: SettingsDep,
@@ -175,12 +175,12 @@ def autocomplete(
     trip_id: int,
     q: Annotated[str, Query(min_length=2, max_length=100)],
     session_token: Annotated[str, Query(min_length=8, max_length=100)],
-) -> list[SuggestionOut]:
+) -> list[AutocompleteOut]:
     """Suggest places in the trip's country (counted against the Autocomplete free tier)."""
     trip = get_trip_or_404(session, trip_id)
     suggestions = client.autocomplete(q, session_token=session_token, region_code=_region_code(settings, trip))
     return [
-        SuggestionOut(google_place_id=s.place_id, main_text=s.main_text, secondary_text=s.secondary_text)
+        AutocompleteOut(google_place_id=s.place_id, main_text=s.main_text, secondary_text=s.secondary_text)
         for s in suggestions
     ]
 

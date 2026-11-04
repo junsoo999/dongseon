@@ -31,6 +31,7 @@ class StayArea(BaseModel):
 
     label: str
     query: str
+    search_name: str | None = None  # English area name for booking-site search links
 
 
 class HolidayPeriod(BaseModel):
@@ -90,6 +91,8 @@ class CityConfig(BaseModel):
     timezone: str
     currency: str
     region_code: str | None = None
+    name_en: str | None = None  # for search links on booking sites
+    iata_city: str | None = None  # metropolitan area code for flight searches, e.g. TYO
     center: Center | None = None
     airports: list[Airport] = Field(default_factory=list)
     stay_areas: list[StayArea] = Field(default_factory=list)

@@ -229,3 +229,83 @@ def _log_job(engine: "Engine", job: str, status: str, rows: int, error: str | No
             row = JobLog(job=job, key="", status=status, rows=rows, ran_at=datetime.now(UTC))
             session.add(row)
         row.status, row.rows, row.ran_at, row.error = status, rows, datetime.now(UTC), error
+
+
+@app.command(help="AI가 웹을 조사해 가볼 곳·맛집·숙소 후보를 추천합니다 (출처 포함, 화면에서 수락/거절).")
+def scout(
+    trip: Annotated[int | None, typer.Option("--trip", help="이 여행만 (기본: 끝나지 않은 모든 여행)")] = None,
+    only: Annotated[str | None, typer.Option("--only", help="place 또는 stay만")] = None,
+    force: Annotated[bool, typer.Option("--force", help="입력이 같아도 다시 조사")] = False,
+) -> None:
+    """Research place and stay suggestions with headless Claude Code (resumable, one run at a time)."""
+    from dongseon.core.profile import load_profile
+    from dongseon.llm.claude_cli import ClaudeCli, LlmError
+    from dongseon.scout import scout_trip
+
+    settings = get_settings()
+    if not settings.google_maps_server_key:
+        raise _fail("GOOGLE_MAPS_SERVER_KEY가 .env에 없습니다")
+    if only not in (None, "place", "stay"):
+        raise _fail("--only는 place 또는 stay입니다")
+    kinds = (only,) if only else ("place", "stay")
+    upgrade_schema(settings.database_file)
+    engine = get_engine(settings.database_file)
+    defaults = load_defaults(settings.defaults_file)
+    profile_path = (
+        settings.profile_file if settings.profile_file.exists() else REPO_ROOT / "config/profile.example.yaml"
+    )
+    profile = load_profile(profile_path)
+    llm = ClaudeCli(engine, model=settings.llm_model, daily_token_limit=settings.llm_daily_token_limit)
+    status, error, rows = "ok", None, 0
+    try:
+        with job_lock(settings.lock_path, "scout"), httpx.Client(timeout=15.0) as http:
+            with session_scope(engine) as session:
+                today = datetime.now(UTC).date()
+                stmt = (
+                    select(Trip).where(Trip.end_date >= today) if trip is None else select(Trip).where(Trip.id == trip)
+                )
+                trips = session.scalars(stmt).all()
+                if not trips:
+                    typer.echo("조사할 여행이 없습니다")
+            for t_id in [t.id for t in trips]:
+                try:
+                    with session_scope(engine) as session:
+                        t = session.get(Trip, t_id)
+                        assert t is not None
+                        city = load_city(settings.cities_path, t.city_key)
+                        meter = make_meter(
+                            session,
+                            defaults.google_free_tier,
+                            warn_ratio=settings.google_free_tier_warn_ratio,
+                            stop_ratio=settings.google_free_tier_stop_ratio,
+                        )
+                        client = GooglePlacesClient(http, settings.google_maps_server_key, meter)
+                        summary = scout_trip(
+                            session,
+                            trip=t,
+                            city=city,
+                            profile=profile,
+                            settings=settings,
+                            llm=llm,
+                            client=client,
+                            http=http,
+                            kinds=kinds,
+                            force=force,
+                        )
+                    for r in summary.results:
+                        label = "장소" if r.kind == "place" else "숙소"
+                        if r.skipped:
+                            typer.echo(f"#{t_id} {label}: 최근에 같은 조건으로 조사해서 건너뜀 (--force로 다시)")
+                        else:
+                            rows += r.stored
+                            typer.echo(
+                                f"#{t_id} {label}: 제안 {r.proposed}건 중 새 추천 {r.stored}건 (장소 매칭 실패 {r.unmatched})"
+                            )
+                except (LlmError, FreeTierExceededError, PlacesError, httpx.HTTPError) as e:
+                    status, error = ("quota" if isinstance(e, FreeTierExceededError) else "error"), str(e)[:300]
+                    typer.echo(f"#{t_id} 조사 실패: {e}", err=True)
+    except JobLockedError as e:
+        raise _fail("이미 실행 중입니다", EXIT_LOCKED) from e
+    _log_job(engine, "scout", status, rows, error)
+    if status != "ok":
+        raise typer.Exit(EXIT_SYSTEM_ERROR)

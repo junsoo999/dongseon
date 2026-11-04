@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { mockApi } from '../test/mockApi'
 import { Flights } from './Flights'
 
 const trip = {
@@ -83,12 +84,19 @@ describe('Flights', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('compares usable time and marks the best option', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((url: string) =>
-        Promise.resolve(new Response(JSON.stringify(url.includes('/flights') ? flights : [trip]))),
-      ),
-    )
+    mockApi([
+      [
+        '/search-links',
+        {
+          flights: [
+            { site: 'naver', label: '네이버 항공권 ICN→TYO', url: 'https://flight.naver.com/x' },
+          ],
+          stays: [],
+        },
+      ],
+      ['/flights', flights],
+      ['/api/trips', [trip]],
+    ])
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(
       <QueryClientProvider client={client}>
@@ -103,5 +111,6 @@ describe('Flights', () => {
     expect(screen.getAllByText(/1위 동네 긴자 기준/)).toHaveLength(2)
     expect(screen.getByText('NRT에 도착한 뒤 KIX에서 출발합니다')).toBeInTheDocument()
     expect(screen.getByText('현지에서 쓰는 시간')).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: '네이버 항공권 ICN→TYO' })).toBeInTheDocument()
   })
 })

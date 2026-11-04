@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { mockApi } from '../test/mockApi'
 import { Places } from './Places'
 
 // The real map needs a browser key and the Google loader; tests check the page around it.
@@ -63,17 +64,11 @@ const pins = [
 ]
 
 function renderPage() {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn((url: string) => {
-      const body = url.startsWith('/api/trips/1/pins')
-        ? pins
-        : url.startsWith('/api/trips')
-          ? [trip]
-          : []
-      return Promise.resolve(new Response(JSON.stringify(body)))
-    }),
-  )
+  mockApi([
+    ['/api/trips/1/pins', pins],
+    ['/suggestions', []],
+    ['/api/trips', [trip]],
+  ])
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>

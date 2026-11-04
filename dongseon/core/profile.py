@@ -61,6 +61,14 @@ class FoodPrefs(BaseModel):
     avoid: list[str] = Field(default_factory=list)
 
 
+class StayPrefs(BaseModel):
+    """Stay preferences for recommendations."""
+
+    prefer: list[str] = Field(default_factory=list)  # e.g. ["airbnb", "hotel"]
+    wants: list[str] = Field(default_factory=list)  # e.g. ["욕조"]
+    nightly_budget_krw: int | None = None
+
+
 class Profile(BaseModel):
     """Household travel preferences."""
 
@@ -73,6 +81,7 @@ class Profile(BaseModel):
     priority_weights: dict[Priority, int] = Field(default_factory=lambda: {"must": 100, "want": 10, "maybe": 1})
     walking: Walking = Field(default_factory=Walking)
     food: FoodPrefs = Field(default_factory=FoodPrefs)
+    stay: StayPrefs = Field(default_factory=StayPrefs)
 
     @field_validator("day_windows", "meal_windows", mode="before")
     @classmethod

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { usePins } from '../api/hooks'
 import { AddPlaceSheet } from '../components/AddPlaceSheet'
+import { AiSuggestions } from '../components/AiSuggestions'
 import { BottomSheet } from '../components/BottomSheet'
 import { PinEditSheet } from '../components/PinEditSheet'
 import { PlacesMap } from '../components/PlacesMap'
@@ -116,6 +117,10 @@ export function Places() {
             Google 장소와 연결되지 않은 곳이 {unresolved.length}곳 있습니다. 눌러서 연결하세요.
           </p>
         )}
+
+        <div className="mb-4">
+          <AiSuggestions tripId={trip.id} kind="place" />
+        </div>
 
         {pins.isError && <p className="text-sm text-red-700">{pins.error.message}</p>}
         {pins.isSuccess && all.length === 0 && (

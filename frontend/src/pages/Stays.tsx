@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import type { OriginOut, StayOut } from '../api/client'
 import { usePins, useStays, useStayScore } from '../api/hooks'
+import { AiSuggestions } from '../components/AiSuggestions'
+import { StaySearchLinks } from '../components/SearchLinks'
 import { StaySheet } from '../components/StaySheet'
 import { StaysMap } from '../components/StaysMap'
 import { formatKrw, formatMinutes, formatMoney } from '../lib/format'
@@ -169,6 +171,9 @@ export function Stays() {
             })}
           </ul>
         )}
+
+        <StaySearchLinks tripId={trip.id} />
+        <AiSuggestions tripId={trip.id} kind="stay" />
 
         {score.data && (
           <div className="space-y-1 rounded-lg bg-gray-50 p-3 text-xs text-gray-600">

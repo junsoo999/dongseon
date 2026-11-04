@@ -9,7 +9,7 @@ export type TripOut = S['TripOut']
 export type TripIn = S['TripIn']
 export type TripPatch = S['TripPatch']
 export type CategoryOut = S['CategoryOut']
-export type SuggestionOut = S['SuggestionOut']
+export type SuggestionOut = S['AutocompleteOut']
 export type ResolveUrlOut = S['ResolveUrlOut']
 export type PinOut = S['PinOut']
 export type PinCreate = S['PinCreate']
@@ -27,6 +27,9 @@ export type FlightIn = S['FlightIn']
 export type LegIn = S['LegIn']
 export type LegOut = S['LegOut']
 export type EvaluationOut = S['EvaluationOut']
+export type AiSuggestionOut = S['AiSuggestionOut']
+export type SearchLinksOut = S['SearchLinksOut']
+export type LinkOut = S['LinkOut']
 
 export class ApiError extends Error {
   readonly status: number
