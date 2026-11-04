@@ -1,0 +1,19 @@
+key: tokyo
+name: 도쿄
+country: JP
+region_code: JP  # Places API regionCode
+timezone: Asia/Tokyo
+currency: JPY
+airports:
+  - {code: HND, query: "Haneda Airport"}
+  - {code: NRT, query: "Narita International Airport"}
+stay_areas:
+  - {label: 신주쿠, query: "Shinjuku Station"}
+  - {label: 시부야, query: "Shibuya Station"}
+  - {label: 긴자, query: "Ginza Station"}
+  - {label: 도쿄역·니혼바시, query: "Tokyo Station"}
+  - {label: 우에노, query: "Ueno Station"}
+  - {label: 아사쿠사, query: "Asakusa Station"}
+  - {label: 이케부쿠로, query: "Ikebukuro Station"}
+approx_speed_kmh: null  # straight-line approximation; filled after calibrating against transit samples
+holiday_periods: []     # filled in M3 after re-checking sources (docs/PLAN.md section 12)

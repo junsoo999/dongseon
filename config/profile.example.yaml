@@ -1,0 +1,23 @@
+# Example profile with fake values. Copy to config/profile.yaml (gitignored) and edit.
+travelers:
+  - label: 나
+  - label: 동행
+home_airports: [ICN, GMP]
+pace: normal  # relaxed | normal | packed
+day_windows:
+  relaxed: ["10:00", "20:00"]
+  normal: ["09:00", "21:00"]
+  packed: ["08:00", "22:00"]
+meal_windows:
+  lunch: ["11:30", "13:30"]
+  dinner: ["18:00", "20:30"]
+buffers_min:
+  departure_airport: 120
+  arrival_immigration: 60
+  transfer: 10
+priority_weights: {must: 100, want: 10, maybe: 1}
+walking:
+  max_walk_min_per_leg: 15
+food:
+  likes: []
+  avoid: []

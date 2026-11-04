@@ -1,0 +1,21 @@
+# [TAG] <subject>
+# example: [FEAT] Add Takeout saved-list import
+# TAG: FEAT FIX DOCS STYLE REFACTOR PERF TEST BUILD CI CHORE REVERT HOTFIX BOT
+##### Subject 50 characters ################# -> |
+
+
+# Body Message
+######## Body 72 characters ####################################### -> |
+
+
+# --- COMMIT END ---
+# Remember me ~
+#   Write in English
+#   Capitalize the subject line
+#   Use the imperative mood in the subject line
+#   Do not end the subject line with a period
+#   Separate subject from body with a blank line
+#   Use the body to explain what and why vs. how
+#   Can use multiple lines with "-" for bullet points in body
+#   Never include personal data (trip dates, companions, bookings, home location)
+# ------------------

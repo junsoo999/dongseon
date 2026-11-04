@@ -1,0 +1,52 @@
+# Shared, non-personal defaults. Facts that change (free caps, prices) carry as_of and source_url.
+
+google_free_tier:
+  # Monthly free calls per SKU. Re-check against the official price list before relying on it.
+  as_of: 2026-11-04
+  source_url: https://developers.google.com/maps/billing-and-pricing/pricing
+  # Google counts usage per calendar month in this timezone.
+  billing_timezone: America/Los_Angeles
+  monthly_free:
+    places_details_essentials: 10000
+    places_details_pro: 5000
+    places_details_enterprise: 1000
+    places_details_ids_only: null  # listed as Unlimited
+    places_text_search_ids_only: null  # listed as Unlimited
+    places_text_search_pro: 5000
+    places_text_search_enterprise: 1000
+    places_autocomplete: 10000
+    routes_compute_routes_essentials: 10000
+    routes_compute_routes_pro: 5000
+    routes_route_matrix_essentials: 10000
+    routes_route_matrix_pro: 5000
+    maps_dynamic: 10000
+
+categories:
+  # Google primaryType -> app category. Verified against the Places (New) type table in M1.
+  mapping:
+    restaurant: food
+    cafe: cafe
+    coffee_shop: cafe
+    bakery: cafe
+    bar: bar
+    tourist_attraction: sight
+    park: sight
+    museum: museum
+    art_gallery: museum
+    shopping_mall: shopping
+    department_store: shopping
+    store: shopping
+    amusement_park: experience
+    aquarium: experience
+    zoo: experience
+  fallback: other
+  # Default dwell time per category in minutes; pins can override.
+  dwell_min:
+    food: 75
+    cafe: 45
+    bar: 90
+    sight: 60
+    museum: 120
+    shopping: 60
+    experience: 150
+    other: 60

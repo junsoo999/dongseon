@@ -1,0 +1,26 @@
+# Secrets and personal data
+.env
+config/profile.yaml
+
+# Local data
+data/
+
+# Python
+.venv/
+__pycache__/
+
+# Node
+node_modules/
+
+# Build output
+frontend/dist/
+*.tsbuildinfo
+.DS_Store
+
+# Test / tool caches
+pytest-report.xml
+coverage.xml
+.coverage
+.pytest_cache/
+.ruff_cache/
+.gstack/
