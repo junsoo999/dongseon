@@ -18,6 +18,8 @@ const fare = (id: number, over: object) => ({
     {
       direction: 'out',
       flight: 'RS247',
+      carrier_code: 'RS',
+      duration_min: 135,
       carrier: '에어서울',
       dep_airport: 'ICN',
       dep_local: '2026-12-28T08:10',
@@ -27,6 +29,8 @@ const fare = (id: number, over: object) => ({
     {
       direction: 'back',
       flight: '7C1108',
+      carrier_code: '7C',
+      duration_min: 180,
       carrier: '제주항공',
       dep_airport: 'NRT',
       dep_local: '2027-01-01T18:15',
@@ -63,7 +67,12 @@ describe('LivePrices', () => {
     wrap(<LiveFares tripId={1} />)
     expect(await screen.findByText('가성비 1위')).toBeInTheDocument()
     expect(screen.getByText('최저가')).toBeInTheDocument()
-    expect(screen.getAllByText(/RS247 ICN 12\/28 08:10 → NRT 10:25/)).toHaveLength(2)
+    expect(screen.getAllByText(/12\/28\(월\) · 에어서울 RS247/)).toHaveLength(2)
+    expect(screen.getAllByText('2시간 15분')).toHaveLength(2)
+    expect(screen.getAllByAltText('에어서울')[0]).toHaveAttribute(
+      'src',
+      expect.stringContaining('/RS@png'),
+    )
     expect(screen.getAllByText(/1시간당 ₩7,863/)).toHaveLength(2)
     expect(screen.getByText(/신주쿠 기준 근사/)).toBeInTheDocument()
     fireEvent.click(screen.getAllByRole('button', { name: '후보로 추가' })[0])
