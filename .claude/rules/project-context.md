@@ -71,7 +71,7 @@ dongseon/                           # repo root (uv project)
 | M2 | Stays and flights: approximate travel times (no Google transit in Japan), neighborhood scores, stay and flight comparison | done |
 | M2.5 | AI scouting: places/stay research with sources, accept/reject, search deep links, `scout` job | in review |
 | M2.6 | Live prices: Ignav fares ranked by cost per usable hour, Rakuten vacancies, price history, `prices`/`daily` jobs | in review |
-| M3 | Itinerary: per-date hours windows, OR-Tools solver, validator, timeline + map, edit/lock/re-solve, versions | |
+| M3 | Itinerary: per-date hours windows, OR-Tools solver, validator, timeline + map, edit/lock/re-solve, versions | M3a in review |
 | M4 | AI: claude_cli, plan_review, rain_plan, food/hours/stay research, booking_parse, suggestion flow | |
 | M5 | Trip mode: today screen, weather/FX, D-7 hours refresh, daily + launchd, remote access, PWA offline, exports | |
 | M6 | (optional) Takeout saved-list import (moved from M1), spending log, retrospective, paid flight/stay adapters, other cities | |

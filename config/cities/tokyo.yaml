@@ -36,4 +36,13 @@ approx:
   rail_speed_source_url: https://trafficnews.jp/post/79719/3
   station_access_min: 10      # assumption: walk to the station and from the station, both ends together
   wait_min: 2                 # half of the 3-5 min daytime headway
-holiday_periods: []     # filled in M3 after re-checking sources (docs/PLAN.md section 12)
+holiday_periods:
+  - key: year_end
+    start: "12-29"
+    end: "01-04"
+    note: >-
+      많은 관광지, 상점, 식당, 은행이 이 기간 중 하루 이상 쉬며 1월 1일이 가장 제한적이다.
+      박물관은 며칠씩 쉬는 경우가 많다. 신사·절은 열지만 1월 1~3일 하쓰모데로 붐빈다.
+      12/29~31 출발, 1/2~4 귀경으로 열차·공항이 붐빈다.
+    source_url: https://www.japan-guide.com/e/e2276.html
+    as_of: 2026-11-05

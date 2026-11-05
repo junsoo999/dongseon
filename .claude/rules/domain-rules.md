@@ -69,6 +69,16 @@ alwaysApply: true
   2026-07-17), hotel partner APIs, Tabelog, Naver blogs and booking-site screens (deep links only).
 - Record units of work in `job_log` so jobs resume; retry only transient errors (5xx, timeout) with exponential backoff, max 3.
 
+## Itinerary solver
+
+- `dongseon/planner/solver.py` (OR-Tools): one vehicle per day, one node per pin per allowed day in a single
+  disjunction (penalty = priority weight × 10,000), a soft cap of even visits per day (below the drop penalties).
+  `extended_swap_active` and `relocate_and_make_active` must stay on, or visits never move between days.
+- Python 9.15 bindings: `SetAllowedVehiclesForIndex` takes no list; restrict days with `VehicleVar(idx).SetValues`.
+  pytest must ignore the SWIG `builtin type ... has no __module__` DeprecationWarning (as errors it crashes import).
+- Opening hours come from `dongseon/planner/hours.py`: user > Google special (7 days) > AI research > Google weekly;
+  Google hours are fetched for must/want pins only and held in process memory for 10 minutes, never stored.
+
 ## Flight and hotel prices
 
 - Ignav (`dongseon/sources/ignav.py`): terms (effective 2026-10-01) allow keeping and analyzing returned flight

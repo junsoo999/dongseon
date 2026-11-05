@@ -319,3 +319,60 @@ class FarePrefs(Base):
     max_price_krw: Mapped[int | None]
     airlines_exclude_json: Mapped[str | None]  # ["7C"]
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class HoursOverride(Base):
+    """Opening hours for one place on one date from the user or AI research (Google hours are never stored)."""
+
+    __tablename__ = "hours_overrides"
+    __table_args__ = (UniqueConstraint("place_id", "day", "source", name="uq_hours_overrides_place_date_source"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    place_id: Mapped[int] = mapped_column(ForeignKey("places.id", ondelete="CASCADE"), index=True)
+    day: Mapped[date] = mapped_column(Date)
+    status: Mapped[str]  # open | closed | special | unknown
+    open_min: Mapped[int | None]  # minutes after local midnight
+    close_min: Mapped[int | None]  # may exceed 1440 when closing after midnight
+    source: Mapped[str]  # user | ai_research
+    source_url: Mapped[str | None]
+    checked_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class Itinerary(Base):
+    """One version of a trip's day-by-day plan (solver draft, AI suggestion or user edit)."""
+
+    __tablename__ = "itineraries"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), index=True)
+    version: Mapped[int]
+    origin: Mapped[str]  # solver | ai | user
+    status: Mapped[str] = mapped_column(default="active")  # active | archived
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    solver_stats_json: Mapped[str | None]  # objective, dropped pins with reasons, approximations used
+
+    items: Mapped[list["ItineraryItem"]] = relationship(
+        back_populates="itinerary", cascade="all, delete-orphan", order_by="(ItineraryItem.day, ItineraryItem.seq)"
+    )
+
+
+class ItineraryItem(Base):
+    """A visit, move or stay segment in an itinerary. Times are the plan's own estimates (app data)."""
+
+    __tablename__ = "itinerary_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    itinerary_id: Mapped[int] = mapped_column(ForeignKey("itineraries.id", ondelete="CASCADE"), index=True)
+    day: Mapped[date] = mapped_column(Date)
+    seq: Mapped[int]
+    kind: Mapped[str]  # visit | meal | move | stay | flight
+    pin_id: Mapped[int | None] = mapped_column(ForeignKey("trip_pins.id", ondelete="SET NULL"))
+    label: Mapped[str]
+    start_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    end_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    move_mode: Mapped[str | None]  # walk | rail
+    move_min: Mapped[int | None]
+    locked: Mapped[bool] = mapped_column(default=False)
+    warnings_json: Mapped[str | None]
+
+    itinerary: Mapped[Itinerary] = relationship(back_populates="items")

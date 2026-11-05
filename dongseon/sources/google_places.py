@@ -25,6 +25,9 @@ SKU_DETAILS_IDS_ONLY = "places_details_ids_only"
 # Text Search with only places.id: Text Search Essentials (IDs Only), no free-tier cap.
 TEXT_SEARCH_IDS_ONLY_FIELDS = "places.id"
 SKU_TEXT_SEARCH_IDS_ONLY = "places_text_search_ids_only"
+# Place Details with opening hours: regularOpeningHours and currentOpeningHours are Enterprise fields.
+DETAILS_HOURS_FIELDS = "id,regularOpeningHours,currentOpeningHours,utcOffsetMinutes"
+SKU_DETAILS_ENTERPRISE = "places_details_enterprise"
 # Autocomplete (New): billed per request as Autocomplete Requests (the first 12 in a session; later ones are free).
 # Counting every request is a deliberate overestimate.
 SKU_AUTOCOMPLETE = "places_autocomplete"
@@ -189,6 +192,23 @@ class GooglePlacesClient:
         return PlaceGeo(
             place_id=data["id"], lat=float(loc["latitude"]), lng=float(loc["longitude"]), types=data.get("types") or []
         )
+
+    def details_hours(self, place_id: str) -> dict:
+        """Fetch raw opening hours (Enterprise). Use within the request; never store the result.
+
+        Raises:
+            PlaceNotFoundError: If the place is gone.
+        """
+        self._meter(SKU_DETAILS_ENTERPRISE)
+        resp = send_with_retry(
+            lambda: self._http.get(
+                f"{BASE_URL}/places/{place_id}",
+                headers=self._headers(DETAILS_HOURS_FIELDS),
+                params={"languageCode": self._language},
+            )
+        )
+        _raise_for_error(resp)
+        return resp.json()
 
     def refresh_id(self, place_id: str) -> str:
         """Re-check a stored place ID (IDs Only, free) and return the current ID, which may have changed.
