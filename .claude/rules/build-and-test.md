@@ -101,6 +101,7 @@ uv run --no-sync dongseon trip create --city tokyo --start 2030-12-28 --end 2031
 uv run --no-sync dongseon trip list
 uv run --no-sync dongseon places resolve [--trip <id>] [--retry-failed]
 uv run --no-sync dongseon scout [--trip <id>] [--only place|stay] [--force]   # AI research (minutes; uses Claude Code)
+uv run --no-sync dongseon review [--itinerary <id>] [--rain YYYY-MM-DD] [--force]  # AI plan review / rain plan (~1 min)
 ```
 
 ## Daily job, always-on app, remote access (M5)

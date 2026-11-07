@@ -11,6 +11,7 @@ const IDLE_JOB = {
 
 const DEFAULTS: Array<[string, unknown]> = [
   ['/api/jobs/', IDLE_JOB],
+  ['/plan-suggestions', { reviews: [], edits: [] }],
   ['/suggestions', []],
   ['/search-links', { flights: [], stays: [] }],
   [

@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
 import {
   apiGet,
   apiSend,
@@ -27,6 +28,9 @@ import {
   type EditIn,
   type HoursIn,
   type HoursOut,
+  type PlanSuggestionsOut,
+  type PreviewOut,
+  type ReviewIn,
   type ItineraryOut,
   type VersionOut,
   type SuggestionOut,
@@ -243,7 +247,7 @@ export function useDeleteFlight(tripId: number | null) {
   })
 }
 
-type JobName = 'places-resolve' | 'scout' | 'prices'
+type JobName = 'places-resolve' | 'scout' | 'prices' | 'review'
 
 /** A background job's state; polls every 5 s while it runs. */
 export function useJob(name: JobName) {
@@ -407,5 +411,77 @@ export function useSetHours(tripId: number | null) {
       body
         ? apiSend<HoursOut>('PUT', `/trips/${tripId}/pins/${pinId}/hours/${day}`, body)
         : apiSend<null>('DELETE', `/trips/${tripId}/pins/${pinId}/hours/${day}`),
+  })
+}
+
+/** Pending AI day titles, notes and edits for the trip's plan. */
+export function usePlanSuggestions(tripId: number | null) {
+  return useQuery({
+    queryKey: ['planSuggestions', tripId],
+    queryFn: () => apiGet<PlanSuggestionsOut>(`/trips/${tripId}/plan-suggestions`),
+    enabled: tripId !== null,
+  })
+}
+
+/** The review job's state; refreshes the plan suggestions when it finishes. */
+export function useReviewJob(tripId: number | null) {
+  const job = useJob('review')
+  const qc = useQueryClient()
+  const running = job.data?.running ?? false
+  const was = useRef(false)
+  useEffect(() => {
+    if (was.current && !running)
+      void qc.invalidateQueries({ queryKey: ['planSuggestions', tripId] })
+    was.current = running
+  }, [running, qc, tripId])
+  return job
+}
+
+/** Start the AI review (or a rain plan for ``rain_date``) of the active version. */
+export function useStartReview() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: ReviewIn }) =>
+      apiSend<JobStatus>('POST', `/itineraries/${id}/review`, body),
+    onSuccess: (status) => qc.setQueryData(['job', 'review'], status),
+  })
+}
+
+/** An AI edit applied to the current version, not saved. */
+export function usePlanPreview(id: number | null) {
+  return useQuery({
+    queryKey: ['planPreview', id],
+    queryFn: () => apiGet<PreviewOut>(`/plan-suggestions/${id}/preview`),
+    enabled: id !== null,
+    staleTime: 0,
+  })
+}
+
+/** Accept an AI edit: a new version (origin "ai"). */
+export function useAcceptPlanSuggestion(tripId: number | null) {
+  const qc = useQueryClient()
+  const save = useNewVersion<number>(tripId, (id) =>
+    apiSend<ItineraryOut>('POST', `/plan-suggestions/${id}/accept`),
+  )
+  return {
+    ...save,
+    mutate: (id: number, opts?: { onSuccess?: () => void }) =>
+      save.mutate(id, {
+        onSuccess: () => {
+          void qc.invalidateQueries({ queryKey: ['planSuggestions', tripId] })
+          void qc.invalidateQueries({ queryKey: ['planPreview'] })
+          void qc.invalidateQueries({ queryKey: ['pins', tripId] })
+          opts?.onSuccess?.()
+        },
+      }),
+  }
+}
+
+/** Reject an AI edit, or dismiss a review's titles and notes. */
+export function useRejectPlanSuggestion(tripId: number | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => apiSend<null>('POST', `/plan-suggestions/${id}/reject`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['planSuggestions', tripId] }),
   })
 }

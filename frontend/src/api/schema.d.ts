@@ -744,6 +744,106 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/itineraries/{itinerary_id}/review': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Start Review
+     * @description Start the AI review (or rain plan) of the active version in the background.
+     */
+    post: operations['start_review_api_itineraries__itinerary_id__review_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/plan-suggestions': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List Plan Suggestions
+     * @description Pending AI day titles, notes and edits.
+     */
+    get: operations['list_plan_suggestions_api_trips__trip_id__plan_suggestions_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/plan-suggestions/{suggestion_id}/preview': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Preview Plan Suggestion
+     * @description Apply an edit to the current version without saving it.
+     */
+    get: operations['preview_plan_suggestion_api_plan_suggestions__suggestion_id__preview_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/plan-suggestions/{suggestion_id}/accept': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Accept Plan Suggestion
+     * @description Save an applicable edit as a new version (origin "ai"); 409 when it adds problems to the current plan.
+     */
+    post: operations['accept_plan_suggestion_api_plan_suggestions__suggestion_id__accept_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/plan-suggestions/{suggestion_id}/reject': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Reject Plan Suggestion
+     * @description Reject an edit (later reviews are told about it) or dismiss a review's titles and notes.
+     */
+    post: operations['reject_plan_suggestion_api_plan_suggestions__suggestion_id__reject_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/jobs/{name}': {
     parameters: {
       query?: never
@@ -933,6 +1033,19 @@ export interface components {
       warnings: string[]
       /** Items */
       items: components['schemas']['ItemOut'][]
+    }
+    /**
+     * DayTitleOut
+     * @description An AI title for a date.
+     */
+    DayTitleOut: {
+      /**
+       * Date
+       * Format: date
+       */
+      date: string
+      /** Title */
+      title: string
     }
     /**
      * DroppedOut
@@ -1643,6 +1756,81 @@ export interface components {
       confidence: 'high' | 'medium' | 'low'
     }
     /**
+     * PlanEditOut
+     * @description One AI edit and how it checked out against the version it was made for ("AI 제안").
+     */
+    PlanEditOut: {
+      /** Id */
+      id: number
+      /** Source */
+      source: string
+      /** Date */
+      date: string | null
+      /** Itinerary Version */
+      itinerary_version: number
+      /** Op */
+      op: string
+      /** Title */
+      title: string
+      /** Reason */
+      reason: string
+      /** Applicable */
+      applicable: boolean
+      /** Problems */
+      problems: string[]
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+    }
+    /**
+     * PlanReviewOut
+     * @description Day titles and cautions from one AI run ("AI 제안").
+     */
+    PlanReviewOut: {
+      /** Id */
+      id: number
+      /** Source */
+      source: string
+      /** Date */
+      date: string | null
+      /** Itinerary Version */
+      itinerary_version: number
+      /** Day Titles */
+      day_titles: components['schemas']['DayTitleOut'][]
+      /** Notes */
+      notes: string[]
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+    }
+    /**
+     * PlanSuggestionsOut
+     * @description Pending AI plan suggestions for a trip, newest first.
+     */
+    PlanSuggestionsOut: {
+      /** Reviews */
+      reviews: components['schemas']['PlanReviewOut'][]
+      /** Edits */
+      edits: components['schemas']['PlanEditOut'][]
+    }
+    /**
+     * PreviewOut
+     * @description The edit applied to the current version (not saved) and its new problems.
+     */
+    PreviewOut: {
+      itinerary: components['schemas']['ItineraryOut']
+      /** Applicable */
+      applicable: boolean
+      /** Problems */
+      problems: string[]
+      /** Resolved */
+      resolved: boolean
+    }
+    /**
      * ResolveUrlIn
      * @description A pasted Google Maps URL.
      */
@@ -1663,6 +1851,19 @@ export interface components {
       label_hint: string | null
       /** Reason */
       reason: string | null
+    }
+    /**
+     * ReviewIn
+     * @description Review the whole version, or plan one date for rain.
+     */
+    ReviewIn: {
+      /** Rain Date */
+      rain_date?: string | null
+      /**
+       * Force
+       * @default false
+       */
+      force: boolean
     }
     /**
      * ScoreOut
@@ -3425,12 +3626,169 @@ export interface operations {
       }
     }
   }
+  start_review_api_itineraries__itinerary_id__review_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        itinerary_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReviewIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['JobStatus']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  list_plan_suggestions_api_trips__trip_id__plan_suggestions_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PlanSuggestionsOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  preview_plan_suggestion_api_plan_suggestions__suggestion_id__preview_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        suggestion_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PreviewOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  accept_plan_suggestion_api_plan_suggestions__suggestion_id__accept_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        suggestion_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ItineraryOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  reject_plan_suggestion_api_plan_suggestions__suggestion_id__reject_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        suggestion_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   job_status_api_jobs__name__get: {
     parameters: {
       query?: never
       header?: never
       path: {
-        name: 'places-resolve' | 'scout' | 'prices'
+        name: 'places-resolve' | 'scout' | 'prices' | 'review'
       }
       cookie?: never
     }
@@ -3461,7 +3819,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        name: 'places-resolve' | 'scout' | 'prices'
+        name: 'places-resolve' | 'scout' | 'prices' | 'review'
       }
       cookie?: never
     }

@@ -25,6 +25,7 @@ class Categories(BaseModel):
     mapping: dict[str, str] = Field(default_factory=dict)
     fallback: str = "other"
     dwell_min: dict[str, int] = Field(default_factory=dict)
+    indoor: list[str] = Field(default_factory=list)  # categories that work on a rainy day
 
 
 class Defaults(BaseModel):

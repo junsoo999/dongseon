@@ -84,7 +84,7 @@ def _out(s: AiSuggestion, session: SessionDep) -> AiSuggestionOut:
 
 def _get(session: SessionDep, suggestion_id: int) -> AiSuggestion:
     s = session.get(AiSuggestion, suggestion_id)
-    if s is None:
+    if s is None or s.kind not in ("place", "stay"):
         raise HTTPException(status_code=404, detail="추천을 찾을 수 없습니다")
     if s.status != "pending":
         raise HTTPException(status_code=409, detail="이미 처리한 추천입니다")
@@ -100,9 +100,11 @@ def list_suggestions(
 ) -> list[AiSuggestionOut]:
     """List AI suggestions for a trip, newest first."""
     get_trip_or_404(session, trip_id)
-    stmt = select(AiSuggestion).where(AiSuggestion.trip_id == trip_id, AiSuggestion.status == status)
-    if kind:
-        stmt = stmt.where(AiSuggestion.kind == kind)
+    stmt = select(AiSuggestion).where(
+        AiSuggestion.trip_id == trip_id,
+        AiSuggestion.status == status,
+        AiSuggestion.kind.in_([kind] if kind else ["place", "stay"]),
+    )
     return [_out(s, session) for s in session.scalars(stmt.order_by(AiSuggestion.created_at.desc(), AiSuggestion.id))]
 
 

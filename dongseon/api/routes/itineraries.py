@@ -14,7 +14,7 @@ from dongseon.api.routes.trips import get_trip_or_404
 from dongseon.core.cities import load_city
 from dongseon.db.models import Itinerary, Trip, TripPin
 from dongseon.places.service import coords_for
-from dongseon.planner.build import Edit, build_itinerary
+from dongseon.planner.build import Edit, build_itinerary, edit_of
 
 router = APIRouter(tags=["itineraries"])
 
@@ -228,22 +228,6 @@ def _get_or_404(session: SessionDep, itinerary_id: int) -> Itinerary:
     return it
 
 
-def _edit_of(it: Itinerary, *, resolve: bool) -> Edit:
-    """The layout, locks and exclusions of a stored version."""
-    stats = json.loads(it.solver_stats_json or "{}")
-    layout: dict[date, list[int]] = {date.fromisoformat(d): [] for d in stats.get("days") or {}}
-    for item in sorted(it.items, key=lambda x: (x.day, x.seq)):
-        if item.pin_id:
-            layout.setdefault(item.day, []).append(item.pin_id)
-    return Edit(
-        layout=layout,
-        locked=frozenset(i.pin_id for i in it.items if i.locked and i.pin_id),
-        excluded=frozenset(stats.get("excluded") or []),
-        resolve=resolve,
-        base_dropped={x["pin_id"]: x["reason"] for x in stats.get("dropped") or []},
-    )
-
-
 def _new_version(
     session: SessionDep,
     settings: SettingsDep,
@@ -275,7 +259,7 @@ def edit_itinerary(
     base = _get_or_404(session, itinerary_id)
     if base.status != "active":
         raise HTTPException(status_code=409, detail="최신 버전이 아닙니다. 화면을 새로 고친 뒤 다시 편집하세요")
-    old = _edit_of(base, resolve=body.resolve)
+    old = edit_of(base, resolve=body.resolve)
     edit = Edit(
         layout={d.date: d.pin_ids for d in body.days},
         locked=frozenset(body.locked),
@@ -298,7 +282,7 @@ def resolve_itinerary(
     """Re-solve a version: locked visits stay on their date and in their order, removed pins stay out."""
     base = _get_or_404(session, itinerary_id)
     trip = get_trip_or_404(session, base.trip_id)
-    return _new_version(session, settings, profile, http, client, trip, _edit_of(base, resolve=True))
+    return _new_version(session, settings, profile, http, client, trip, edit_of(base, resolve=True))
 
 
 @router.post("/itineraries/{itinerary_id}/restore", response_model=ItineraryOut, status_code=201)
@@ -313,7 +297,7 @@ def restore_itinerary(
     """Make a new version with an older version's layout, timed with today's hours and settings."""
     base = _get_or_404(session, itinerary_id)
     trip = get_trip_or_404(session, base.trip_id)
-    edit = _edit_of(base, resolve=False)
+    edit = edit_of(base, resolve=False)
     known = {pid for pids in edit.layout.values() for pid in pids}
     pins = set(session.scalars(select(TripPin.id).where(TripPin.trip_id == trip.id)))
     if known - pins:  # pins deleted since: drop them from the layout

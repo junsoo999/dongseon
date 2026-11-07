@@ -45,6 +45,11 @@ export type DroppedOut = S['DroppedOut']
 export type EditIn = S['EditIn']
 export type HoursIn = S['HoursIn']
 export type HoursOut = S['HoursOut']
+export type ReviewIn = S['ReviewIn']
+export type PlanSuggestionsOut = S['PlanSuggestionsOut']
+export type PlanReviewOut = S['PlanReviewOut']
+export type PlanEditOut = S['PlanEditOut']
+export type PreviewOut = S['PreviewOut']
 
 export class ApiError extends Error {
   readonly status: number
