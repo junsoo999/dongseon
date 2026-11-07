@@ -53,7 +53,7 @@ const DEFAULTS: Array<[string, unknown]> = [
 export function mockApi(routes: Array<[string, unknown]>) {
   const overridden = new Set(routes.map(([f]) => f))
   const table = [...DEFAULTS.filter(([f]) => !overridden.has(f)), ...routes]
-  const fn = vi.fn((url: string) => {
+  const fn = vi.fn((url: string, _init?: RequestInit) => {
     const hit = table.find(([fragment]) => url.includes(fragment))
     return Promise.resolve(new Response(JSON.stringify(hit ? hit[1] : [])))
   })

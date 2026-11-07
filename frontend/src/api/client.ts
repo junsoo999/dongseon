@@ -41,6 +41,10 @@ export type ItineraryOut = S['ItineraryOut']
 export type DayOut = S['DayOut']
 export type ItemOut = S['ItemOut']
 export type VersionOut = S['VersionOut']
+export type DroppedOut = S['DroppedOut']
+export type EditIn = S['EditIn']
+export type HoursIn = S['HoursIn']
+export type HoursOut = S['HoursOut']
 
 export class ApiError extends Error {
   readonly status: number

@@ -1,6 +1,10 @@
 import { useEffect, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
-/** A sheet that slides up from the bottom on phones and shows as a centered dialog on wider screens. */
+/**
+ * A sheet that slides up from the bottom on phones and shows as a centered dialog on wider screens.
+ * Rendered into ``document.body`` so it stays above the tab bar even inside the map panel.
+ */
 export function BottomSheet({
   open,
   title,
@@ -20,7 +24,7 @@ export function BottomSheet({
   }, [open, onClose])
 
   if (!open) return null
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-40 flex items-end justify-center md:items-center">
       <button
         type="button"
@@ -46,6 +50,7 @@ export function BottomSheet({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

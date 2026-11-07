@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockApi } from '../test/mockApi'
@@ -38,6 +38,8 @@ const item = {
   move_min: 25,
   move_mode: 'rail',
   hours: '10:00~18:00 · Google',
+  hours_source: 'google_regular',
+  locked: false,
   warnings: ['연휴 기간 영업 미확인'],
 }
 const itinerary = {
@@ -70,26 +72,72 @@ const itinerary = {
     },
   ],
   dropped: [
-    { pin_id: 2, label: '먼 곳', priority: 'maybe', reason: '하루 시간 안에 넣지 못했습니다' },
+    {
+      pin_id: 2,
+      label: '먼 곳',
+      priority: 'maybe',
+      reason: '하루 시간 안에 넣지 못했습니다',
+      excluded: false,
+    },
   ],
 }
 
+function renderPage() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <Itinerary />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
+
 describe('Itinerary', () => {
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+
+  it('edits a layout: moving a visit to another day locks it and saves a new version', async () => {
+    const fetch = mockApi([
+      ['/edit', { ...itinerary, id: 6, version: 3, origin: 'user' }],
+      ['/itineraries/active', itinerary],
+      ['/api/trips', [trip]],
+    ])
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: '✏️ 편집' }))
+    expect(screen.getByText('편집 중')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('다른 날로 옮기기'), {
+      target: { value: '2030-12-29' },
+    })
+    expect(
+      screen.getByText('이 날은 비어 있습니다. 아래에서 넣을 수 있습니다.'),
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith('/api/itineraries/5/edit', expect.anything()),
+    )
+    const call = fetch.mock.calls.find(([url]) => url === '/api/itineraries/5/edit')
+    expect(JSON.parse(call?.[1]?.body as string)).toEqual({
+      days: [
+        { date: '2030-12-28', pin_ids: [] },
+        { date: '2030-12-29', pin_ids: [1] },
+      ],
+      locked: [1],
+      excluded: [],
+      resolve: false,
+    })
+    expect(await screen.findByRole('button', { name: '버전 3 ▾' })).toBeInTheDocument()
+  })
 
   it('shows the day timeline with hours, warnings, directions and dropped pins', async () => {
     mockApi([
       ['/itineraries/active', itinerary],
       ['/api/trips', [trip]],
     ])
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    render(
-      <QueryClientProvider client={client}>
-        <MemoryRouter>
-          <Itinerary />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
+    renderPage()
     expect(await screen.findByText('박물관')).toBeInTheDocument()
     expect(screen.getByText('🕘 10:00~18:00 · Google')).toBeInTheDocument()
     expect(screen.getByText('⚠️ 연휴 기간 영업 미확인')).toBeInTheDocument()
@@ -100,7 +148,8 @@ describe('Itinerary', () => {
       expect.stringContaining('destination_place_id=g1'),
     )
     expect(screen.getByText('넣지 못한 곳 1곳')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '다시 만들기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '다시 맞추기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '버전 2 ▾' })).toBeInTheDocument()
     expect(screen.getByText('지도 1곳')).toBeInTheDocument()
   })
 })

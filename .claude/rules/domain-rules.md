@@ -76,6 +76,11 @@ alwaysApply: true
   `extended_swap_active` and `relocate_and_make_active` must stay on, or visits never move between days.
 - Python 9.15 bindings: `SetAllowedVehiclesForIndex` takes no list; restrict days with `VehicleVar(idx).SetValues`.
   pytest must ignore the SWIG `builtin type ... has no __module__` DeprecationWarning (as errors it crashes import).
+- Locked visits (`itinerary_items.locked`) keep their date and order on a re-solve: one copy on that day,
+  `LOCK_PENALTY`, and cumul precedence constraints. Pins the user removed stay out (`solver_stats_json.excluded`).
+- Every version is timed by `solver.schedule()` (earliest start along the order) and checked in
+  `planner/build.py` (`_visit_warnings`), whether it came from the solver or a user edit. Edits, re-solves and
+  restores always create a new version; only the active version can be edited (409 otherwise).
 - Opening hours come from `dongseon/planner/hours.py`: user > Google special (7 days) > AI research > Google weekly;
   Google hours are fetched for must/want pins only and held in process memory for 10 minutes, never stored.
 
