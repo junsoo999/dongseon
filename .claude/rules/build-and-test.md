@@ -102,6 +102,8 @@ uv run --no-sync dongseon trip list
 uv run --no-sync dongseon places resolve [--trip <id>] [--retry-failed]
 uv run --no-sync dongseon scout [--trip <id>] [--only place|stay] [--force]   # AI research (minutes; uses Claude Code)
 uv run --no-sync dongseon review [--itinerary <id>] [--rain YYYY-MM-DD] [--force]  # AI plan review / rain plan (~1 min)
+uv run --no-sync dongseon hours-research [--trip <id>] [--force]   # holiday opening hours (minutes, web)
+uv run --no-sync dongseon area-notes [--trip <id>] [--force]       # stay area notes (minutes, web)
 ```
 
 ## Daily job, always-on app, remote access (M5)

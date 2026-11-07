@@ -1,14 +1,17 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import type { OriginOut, StayOut } from '../api/client'
-import { usePins, useStays, useStayScore } from '../api/hooks'
+import type { OriginOut, StayDraft, StayOut } from '../api/client'
+import { useAreaNotes, usePins, useStays, useStayScore } from '../api/hooks'
 import { AiSuggestions } from '../components/AiSuggestions'
+import { AreaNoteLine, AreaNotesBar } from '../components/AreaNotes'
 import { LiveHotels } from '../components/LivePrices'
 import { StaySearchLinks } from '../components/SearchLinks'
+import { BookingPasteSheet } from '../components/BookingPaste'
 import { StaySheet } from '../components/StaySheet'
 import { StaysMap } from '../components/StaysMap'
 import { formatKrw, formatMinutes, formatMoney } from '../lib/format'
 import { rankColor } from '../lib/stays'
+import { BTN } from '../lib/theme'
 import { useCurrentTrip } from '../lib/trip'
 import { MapLayout, Page } from '../components/MapLayout'
 
@@ -111,9 +114,11 @@ export function Stays() {
   const { trip, trips } = useCurrentTrip()
   const tripId = trip?.id ?? null
   const score = useStayScore(tripId)
+  const areaNotes = useAreaNotes(tripId)
   const stays = useStays(tripId)
   const pins = usePins(tripId)
-  const [sheet, setSheet] = useState<{ stay: StayOut | null } | null>(null)
+  const [sheet, setSheet] = useState<{ stay: StayOut | null; draft?: StayDraft } | null>(null)
+  const [pasting, setPasting] = useState(false)
 
   if (trips.isPending) return <p className="text-gray-500">불러오는 중…</p>
   if (!trip) {
@@ -132,6 +137,7 @@ export function Stays() {
   }
 
   const origins = score.data?.origins ?? []
+  const notes = new Map((areaNotes.data ?? []).map((n) => [n.area, n]))
   const ranked = origins.filter((o) => o.rank !== null).length
   const stayById = new Map((stays.data ?? []).map((s) => [`stay:${s.id}`, s]))
   const center =
@@ -163,6 +169,9 @@ export function Stays() {
             + 숙소 후보
           </button>
         </div>
+        <button type="button" onClick={() => setPasting(true)} className={`${BTN.soft} w-full`}>
+          📋 예약 메일로 입력
+        </button>
 
         {score.isError && <p className="text-sm text-red-700">{score.error.message}</p>}
         {score.data && score.data.targets === 0 && (
@@ -175,6 +184,7 @@ export function Stays() {
           </p>
         )}
 
+        {origins.length > 0 && <AreaNotesBar tripId={trip.id} count={notes.size} />}
         {origins.length > 0 && (
           <ul className="space-y-2">
             {origins.map((o) => {
@@ -187,6 +197,9 @@ export function Stays() {
                     onEdit={s ? () => setSheet({ stay: s }) : undefined}
                   />
                   {s && <StayDetail s={s} />}
+                  {o.kind === 'area' && notes.get(o.label) && (
+                    <AreaNoteLine note={notes.get(o.label)!} />
+                  )}
                 </li>
               )
             })}
@@ -238,7 +251,25 @@ export function Stays() {
         )}
       </MapLayout>
 
-      {sheet && <StaySheet trip={trip} stay={sheet.stay} open onClose={() => setSheet(null)} />}
+      {sheet && (
+        <StaySheet
+          trip={trip}
+          stay={sheet.stay}
+          draft={sheet.draft}
+          open
+          onClose={() => setSheet(null)}
+        />
+      )}
+      {pasting && (
+        <BookingPasteSheet
+          tripId={trip.id}
+          onClose={() => setPasting(false)}
+          onResult={(r) => {
+            setPasting(false)
+            if (r.stay) setSheet({ stay: null, draft: r.stay })
+          }}
+        />
+      )}
     </>
   )
 }

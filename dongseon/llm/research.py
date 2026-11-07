@@ -77,7 +77,7 @@ class _Envelope(BaseModel):
     items: list[dict]
 
 
-def _schema(item: type[BaseModel], max_items: int) -> dict:
+def items_schema(item: type[BaseModel], max_items: int) -> dict:
     """``{"items": [item, ...]}`` with the item's ``$defs`` hoisted to the root so ``#/$defs/...`` resolves."""
     item_schema = item.model_json_schema()
     defs = item_schema.pop("$defs", {})
@@ -92,8 +92,8 @@ def _schema(item: type[BaseModel], max_items: int) -> dict:
     return schema
 
 
-PLACES_SCHEMA = _schema(PlaceItem, 20)
-STAYS_SCHEMA = _schema(StayItem, 12)
+PLACES_SCHEMA = items_schema(PlaceItem, 20)
+STAYS_SCHEMA = items_schema(StayItem, 12)
 
 
 def normalize_name(name: str) -> str:
