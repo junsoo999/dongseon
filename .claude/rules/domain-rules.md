@@ -116,5 +116,15 @@ alwaysApply: true
 - Scouting (`dongseon/llm/research.py`, `dongseon scout`): suggestions are matched to place IDs with IDs Only search,
   matches farther than 40 km from the city center are dropped, and the same input is not researched again within 7 days.
   Accepting makes a "maybe" pin (`added_by=ai`) or a stay candidate; rejected names are sent back as `rejected`.
+- Holiday hours research (`dongseon/llm/hours_research.py`, `dongseon hours-research`): must/want pins with trip
+  dates in a holiday period, in batches of 6, from the user's label, category and note only. A date is stored as
+  `hours_overrides(source=ai_research)` only when open (with times) or closed, with a source URL and not low
+  confidence; pins with rows for every holiday date checked within 7 days are skipped. Shown as "AI 조사 · 확인 필요"
+  with the source link.
+- Stay area notes (`dongseon/llm/area_notes.py`, `dongseon area-notes`): `ai_suggestions` kind `area_note`, one per
+  configured area label, sources required.
+- Booking emails (`dongseon/llm/booking.py`, `POST /trips/{id}/parse-booking`): mask card numbers (Luhn), passport
+  numbers, birth dates, emails and phone numbers before the call (no tools); the text is never stored and the result
+  is only a draft the user confirms in the flight or stay form.
 - Never collect listings from booking sites (Airbnb, Booking.com, Google Flights pages). Open them as deep links
   (`dongseon/links.py`) and let the user add what they pick.

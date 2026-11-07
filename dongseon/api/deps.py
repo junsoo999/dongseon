@@ -12,6 +12,7 @@ from dongseon.core.defaults import Defaults, load_defaults
 from dongseon.core.profile import Profile, load_profile
 from dongseon.core.usage import make_meter
 from dongseon.db.session import get_engine, session_scope
+from dongseon.llm.claude_cli import ClaudeCli
 from dongseon.sources.google_places import GooglePlacesClient
 
 HTTP_TIMEOUT_S = 15.0
@@ -68,3 +69,15 @@ def get_profile(settings: SettingsDep) -> Profile:
 
 
 ProfileDep = Annotated[Profile, Depends(get_profile)]
+
+
+def get_llm(settings: SettingsDep) -> ClaudeCli:
+    """Headless Claude Code caller on the configured database (overridden in tests)."""
+    return ClaudeCli(
+        get_engine(settings.database_file),
+        model=settings.llm_model,
+        daily_token_limit=settings.llm_daily_token_limit,
+    )
+
+
+LlmDep = Annotated[ClaudeCli, Depends(get_llm)]

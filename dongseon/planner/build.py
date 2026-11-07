@@ -440,6 +440,7 @@ def _store(
                             "warnings": _visit_warnings(ctx, i, pin, v, h),
                             "hours": hours_label(h) if h else None,
                             "hours_source": h.source if h else None,
+                            "hours_url": h.source_url if h else None,
                         },
                         ensure_ascii=False,
                     ),

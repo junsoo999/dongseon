@@ -228,4 +228,57 @@ describe('Itinerary', () => {
     const call = fetch.mock.calls.find(([url]) => url === '/api/itineraries/7/review')
     expect(JSON.parse(call?.[1]?.body as string)).toEqual({ rain_date: '2030-12-28', force: true })
   })
+
+  it('shows holiday hours research with sources and the AI hours link on a visit', async () => {
+    const aiItem = {
+      ...item,
+      hours: '10:00~16:00 · AI 조사',
+      hours_source: 'ai_research',
+      hours_url: 'https://example.com/hours',
+    }
+    mockApi([
+      [
+        '/hours-research',
+        {
+          dates: ['2030-12-29'],
+          holiday_note: '연말연시',
+          places: [
+            {
+              pin_id: 1,
+              label: '박물관',
+              priority: 'must',
+              days: [
+                {
+                  date: '2030-12-29',
+                  status: 'closed',
+                  open: null,
+                  close: null,
+                  source_url: 'https://example.com/hours',
+                  checked_at: '2026-11-07T00:00:00Z',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [
+        '/itineraries/active',
+        { ...itinerary, days: [{ ...itinerary.days[0], items: [aiItem] }, itinerary.days[1]] },
+      ],
+      ['/api/trips', [trip]],
+    ])
+    renderPage()
+    expect(await screen.findByText('연휴 영업시간 조사')).toBeInTheDocument()
+    expect(screen.getByText(/꼭·가고 싶은 곳 1곳 중 1곳 확인/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '조사 결과 보기' }))
+    expect(screen.getByRole('link', { name: '12/29 휴무 ↗' })).toHaveAttribute(
+      'href',
+      'https://example.com/hours',
+    )
+    expect(screen.getByText('확인 필요')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '출처↗' })).toHaveAttribute(
+      'href',
+      'https://example.com/hours',
+    )
+  })
 })

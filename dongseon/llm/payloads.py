@@ -194,3 +194,34 @@ def rain_plan_payload(
         "indoor_candidates": elsewhere + pool,
         "rejected": rejected,
     }
+
+
+def hours_research_payload(trip: Trip, city: CityConfig, *, pins: list[TripPin], dates: list[date]) -> dict:
+    """Input for ``hours_research``: the user's labels, categories and notes, and the holiday dates.
+
+    No Google names, addresses or hours: the model identifies the place from the user's own label.
+    """
+    return {
+        "city": city.name,
+        "country": city.country,
+        "dates": [d.isoformat() for d in dates],
+        "holidays": [
+            {"start": p.start, "end": p.end, "note": p.note}
+            for p in city.holiday_periods
+            if any(p.contains(d) for d in dates)
+        ],
+        "places": [
+            {"pin_id": p.id, "label": p.place.label, "category": p.place.category, "note": p.place.user_note}
+            for p in pins
+        ],
+    }
+
+
+def area_notes_payload(trip: Trip, city: CityConfig, profile: Profile) -> dict:
+    """Input for ``stay_area_notes``: configured area labels and the household's stay preferences."""
+    return {
+        **_trip(trip, city, profile),
+        "areas": [{"label": a.label, "name_en": a.search_name} for a in city.stay_areas],
+        "prefer": profile.stay.prefer,
+        "wants": profile.stay.wants,
+    }

@@ -18,13 +18,15 @@ export function SearchPicker({
   sessionToken,
   onPick,
   placeholder = '장소 이름으로 검색',
+  initialQuery = '',
 }: {
   tripId: number
   sessionToken: string
   onPick: (s: SuggestionOut, query: string) => void
   placeholder?: string
+  initialQuery?: string
 }) {
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(initialQuery)
   const debounced = useDebounced(query, 300)
   const { data, isFetching, error } = useAutocomplete(tripId, debounced, sessionToken)
   const showList = debounced.trim().length >= 2

@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
-import { useJob, useStartJob } from '../api/hooks'
+import { useJob, useStartJob, type JobName } from '../api/hooks'
 import { BTN, type Tone } from '../lib/theme'
 
 /** Starts a background job and refreshes `invalidate` query keys when it finishes. */
@@ -10,7 +10,7 @@ export function JobButton({
   invalidate,
   tone,
 }: {
-  name: 'scout' | 'prices'
+  name: JobName
   label: string
   invalidate: unknown[][]
   tone: Tone

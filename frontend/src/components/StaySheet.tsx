@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { StayOut, TripOut } from '../api/client'
+import type { StayDraft, StayOut, TripOut } from '../api/client'
 import { useCreateStay, useDeleteStay, useUpdateStay } from '../api/hooks'
 import { newSessionToken } from '../lib/places'
 import { CURRENCIES, parseAmount } from '../lib/stays'
@@ -13,21 +13,29 @@ type Where =
 
 const inputClass = 'min-h-11 w-full rounded-lg border border-gray-300 px-3 text-base'
 
-/** Create a stay (pick a place first) or edit one (`stay` given). */
+/** Create a stay (pick a place first) or edit one (`stay` given); ``draft`` pre-fills a booked stay from a mail. */
 export function StaySheet({
   trip,
   stay,
+  draft,
   open,
   onClose,
 }: {
   trip: TripOut
   stay: StayOut | null
+  draft?: StayDraft
   open: boolean
   onClose: () => void
 }) {
   return (
-    <BottomSheet open={open} title={stay ? '숙소 편집' : '숙소 후보 추가'} onClose={onClose}>
-      {open && <StayForm key={stay?.id ?? 'new'} trip={trip} stay={stay} onClose={onClose} />}
+    <BottomSheet
+      open={open}
+      title={stay ? '숙소 편집' : draft ? '예약한 숙소 추가' : '숙소 후보 추가'}
+      onClose={onClose}
+    >
+      {open && (
+        <StayForm key={stay?.id ?? 'new'} trip={trip} stay={stay} draft={draft} onClose={onClose} />
+      )}
     </BottomSheet>
   )
 }
@@ -35,22 +43,30 @@ export function StaySheet({
 function StayForm({
   trip,
   stay,
+  draft,
   onClose,
 }: {
   trip: TripOut
   stay: StayOut | null
+  draft?: StayDraft
   onClose: () => void
 }) {
   const [mode, setMode] = useState<'search' | 'map'>('search')
   const [token] = useState(newSessionToken)
   const [where, setWhere] = useState<Where | null>(null)
-  const [label, setLabel] = useState(stay?.label ?? '')
-  const [checkIn, setCheckIn] = useState(stay?.check_in ?? trip.start_date)
-  const [checkOut, setCheckOut] = useState(stay?.check_out ?? trip.end_date)
-  const [amount, setAmount] = useState(stay?.total_amount != null ? String(stay.total_amount) : '')
-  const [currency, setCurrency] = useState(stay?.currency ?? 'JPY')
+  const [label, setLabel] = useState(stay?.label ?? draft?.name ?? '')
+  const [checkIn, setCheckIn] = useState(stay?.check_in ?? draft?.check_in ?? trip.start_date)
+  const [checkOut, setCheckOut] = useState(stay?.check_out ?? draft?.check_out ?? trip.end_date)
+  const [amount, setAmount] = useState(
+    stay?.total_amount != null
+      ? String(stay.total_amount)
+      : draft?.total_amount != null
+        ? String(draft.total_amount)
+        : '',
+  )
+  const [currency, setCurrency] = useState(stay?.currency ?? draft?.currency ?? 'JPY')
   const [url, setUrl] = useState(stay?.booking_url ?? '')
-  const [booked, setBooked] = useState(stay?.status === 'booked')
+  const [booked, setBooked] = useState(stay ? stay.status === 'booked' : !!draft)
   const create = useCreateStay(trip.id)
   const update = useUpdateStay(trip.id)
   const remove = useDeleteStay(trip.id)
@@ -86,8 +102,9 @@ function StayForm({
             tripId={trip.id}
             sessionToken={token}
             placeholder="호텔 이름으로 검색"
+            initialQuery={draft ? (draft.search_query ?? draft.name) : ''}
             onPick={(s, query) => {
-              setLabel(query)
+              setLabel(draft ? draft.name : query)
               setWhere({ kind: 'google', googlePlaceId: s.google_place_id, token })
             }}
           />

@@ -29,6 +29,9 @@ import {
   type HoursIn,
   type HoursOut,
   type PlanSuggestionsOut,
+  type AreaNoteOut,
+  type BookingOut,
+  type HoursResearchOut,
   type PreviewOut,
   type ReviewIn,
   type ItineraryOut,
@@ -247,7 +250,8 @@ export function useDeleteFlight(tripId: number | null) {
   })
 }
 
-type JobName = 'places-resolve' | 'scout' | 'prices' | 'review'
+export type JobName =
+  'places-resolve' | 'scout' | 'prices' | 'review' | 'hours-research' | 'area-notes'
 
 /** A background job's state; polls every 5 s while it runs. */
 export function useJob(name: JobName) {
@@ -483,5 +487,31 @@ export function useRejectPlanSuggestion(tripId: number | null) {
   return useMutation({
     mutationFn: (id: number) => apiSend<null>('POST', `/plan-suggestions/${id}/reject`),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['planSuggestions', tripId] }),
+  })
+}
+
+/** Holiday dates of the trip and the AI-researched hours of its must/want pins. */
+export function useHoursResearch(tripId: number | null) {
+  return useQuery({
+    queryKey: ['hoursResearch', tripId],
+    queryFn: () => apiGet<HoursResearchOut>(`/trips/${tripId}/hours-research`),
+    enabled: tripId !== null,
+  })
+}
+
+/** The latest AI note per stay area. */
+export function useAreaNotes(tripId: number | null) {
+  return useQuery({
+    queryKey: ['areaNotes', tripId],
+    queryFn: () => apiGet<AreaNoteOut[]>(`/trips/${tripId}/area-notes`),
+    enabled: tripId !== null,
+  })
+}
+
+/** Read a pasted booking email into a draft (nothing is saved). */
+export function useParseBooking(tripId: number | null) {
+  return useMutation({
+    mutationFn: (text: string) =>
+      apiSend<BookingOut>('POST', `/trips/${tripId}/parse-booking`, { text }),
   })
 }
