@@ -111,12 +111,11 @@ uv run --no-sync dongseon area-notes [--trip <id>] [--force]       # stay area n
 - `dongseon daily` (launchd `com.dongseon.daily`) refreshes hours, weather and matrices only from D-14 to the end of
   the active trip, otherwise just FX rates. Each step runs as its own CLI process and keeps going when one fails.
 - `dongseon serve` runs always-on as `com.dongseon.serve` on `127.0.0.1:8100`.
-- Remote access: dongseon's own Caddy (`config/Caddyfile`, `scripts/caddy.sh`, launchd `com.dongseon.caddy`) listens on
-  `127.0.0.1:${DONGSEON_PROXY_PORT:-8081}`, requires basic auth for `DONGSEON_DOMAIN` (`DONGSEON_AUTH_USER` / bcrypt
-  `DONGSEON_AUTH_HASH` from `make remote-hash`), proxies to `127.0.0.1:8100` and aborts any other host.
-- The Cloudflare tunnel connector already running on this Mac is shared; only its dashboard route
-  `DONGSEON_DOMAIN` → `http://localhost:8081` belongs to dongseon. Never add dongseon settings to another repo.
-- The domain and the hash are personal: keep them only in `.env`.
+- Remote access: everything outside `127.0.0.1:8100` (Cloudflare Tunnel, basic auth, routing by hostname) lives in a
+  separate shared edge repo used by all self-hosted apps. Do not add proxy, tunnel or auth config here; the domain and
+  credentials are kept there.
+- Add the app's https origin to the Google browser key's HTTP referrer restriction, and keep the edge's default
+  `Referrer-Policy` (the key checks the Referer).
 
 ## Database migrations
 

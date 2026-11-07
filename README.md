@@ -58,20 +58,18 @@ make dev        # http://localhost:5174 (같은 네트워크의 휴대폰은 htt
 | 상시 앱 (`serve`, launchd) | 8100 |
 | 개발 백엔드 (`make dev`) | 8101 |
 | Vite 개발 서버 | 5174 |
-| 원격 접속 Caddy | 8081 |
 
-jipsa(8000 / 8001 / 5173 / 8080)와 동시에 띄울 수 있습니다.
+jipsa(8000 / 8001 / 5173)와 동시에 띄울 수 있습니다.
 
 ## 📱 어디서든 접속하기
 
-dongseon은 자기 Caddy(비밀번호)를 `127.0.0.1:8081`에서 띄우고, 바깥 연결은 이 Mac에서 이미 돌고 있는 Cloudflare Tunnel 연결기(cloudflared)를 같이 탑니다. 연결기는 어느 주소를 어디로 보낼지 대시보드 설정을 따르므로, 다른 앱의 코드에는 dongseon 정보가 들어가지 않습니다.
+dongseon은 `127.0.0.1:8100`에서만 받습니다. 바깥에서 들어오는 길(Cloudflare Tunnel, 비밀번호 확인, 앱별 주소 연결)은 여러 앱이 함께 쓰는 별도의 edge 레포가 맡고, dongseon은 그 구성을 모릅니다.
 
-1. `.env`에 `DONGSEON_DOMAIN`(예: `dongseon.<도메인>`), `DONGSEON_AUTH_USER`, `DONGSEON_AUTH_HASH`(`make remote-hash`로 만든 bcrypt 해시)를 넣고 `make remote-check`로 확인합니다.
-2. `make launchd-install JOB=serve`, `make launchd-install JOB=caddy`로 앱과 Caddy를 상시 실행합니다 (로그 `data/logs/serve.log`, `caddy.log`, `caddy-access.log`).
-3. Cloudflare 대시보드의 터널 **Routes → Add route → Published application**에서 `dongseon.<도메인>`을 `http://localhost:8081`로 연결합니다. 이 Mac에 터널 연결기가 없다면 대시보드에서 터널을 만들고 `brew install cloudflared`로 연결기를 따로 실행합니다.
-4. Google 브라우저 키의 HTTP referrer 제한에 `https://dongseon.<도메인>/*`를 추가합니다.
+1. `make launchd-install JOB=serve`로 상시 앱을 실행합니다 (로그 `data/logs/serve.log`).
+2. edge 쪽에 dongseon 주소를 `127.0.0.1:8100`으로 연결하는 항목을 추가합니다.
+3. Google 브라우저 키의 HTTP referrer 제한에 `https://dongseon.<도메인>/*`를 추가합니다.
 
-코드를 업데이트한 뒤에는 `make app-restart`로 다시 빌드하고 재시작합니다. 도메인과 비밀번호 해시는 `.env`에만 두고 커밋하지 않습니다.
+코드를 업데이트한 뒤에는 `make app-restart`로 다시 빌드하고 재시작합니다.
 
 ## 🗺️ Google Maps Platform 설정
 
@@ -98,9 +96,8 @@ dongseon은 자기 Caddy(비밀번호)를 `127.0.0.1:8081`에서 띄우고, 바�
 | `make usage` | 이번 달 Google SKU별 사용량과 무료 한도 |
 | `make prices` / `make scout` / `make daily` | 실시간 가격 / AI 추천 / 둘 다 (매일 자동은 `make launchd-install JOB=daily`) |
 | `make serve` | 프론트엔드를 빌드해 API와 한 포트로 실행 |
-| `make launchd-install` / `launchd-status` / `launchd-uninstall` | 상시 실행 관리 (`JOB=serve\|caddy`) |
+| `make launchd-install` / `launchd-status` / `launchd-uninstall` | 상시 실행 관리 (`JOB=serve\|daily`) |
 | `make app-restart` | 상시 앱 재빌드 + 재시작 |
-| `make remote-hash` / `remote-check` | 원격 접속 비밀번호 해시 / Caddy 설정 검사 |
 | `make clean` | 캐시와 빌드 산출물 정리 |
 
 ## 🛠 기술 스택

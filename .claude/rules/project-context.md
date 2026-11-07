@@ -17,7 +17,7 @@ including during the trip. It answers:
 5. How do we adapt to rain, closures and holidays?
 6. During the trip, can we see today's plan and open directions on a phone right away?
 
-Non-goals: booking or payment, scraping booking sites, multi-user login (remote access shares one Caddy basic auth),
+Non-goals: booking or payment, scraping booking sites, multi-user login (remote access uses one basic-auth login at the shared edge),
 real-time price comparison, blog or review crawling.
 
 ## Source of truth
@@ -59,7 +59,8 @@ dongseon/                           # repo root (uv project)
   CLI jobs; screens start them in the background behind a per-job file lock (`data/locks/`).
 - The always-on app binds to `127.0.0.1:8100`. `make dev` runs a reloading backend on `127.0.0.1:8101` and Vite on
   port 5174 (`--host` for phones on the LAN), which proxies `/api`.
-- Remote access: dongseon's own Caddy on `127.0.0.1:8081` (basic auth) behind the shared Cloudflare tunnel connector.
+- Remote access: a separate shared edge repo (Cloudflare Tunnel + basic auth) forwards to `127.0.0.1:8100`; this repo
+  knows nothing about it.
 - Frontend API types are generated from the backend OpenAPI schema (`make gen-types`) and committed.
 
 ## Milestones
