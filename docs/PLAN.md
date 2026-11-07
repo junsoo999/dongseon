@@ -16,12 +16,12 @@
 | 사람용 문서 | `README.md`, `CONTRIBUTING.md`, `.gitmessage.txt` |
 | Python 설정 | `pyproject.toml` (ruff, pyright, pytest 설정), `.python-version` |
 | 품질·CI | `.pre-commit-config.yaml`, `.markdownlint.yaml`, `.github/workflows/*`, `.github/PULL_REQUEST_TEMPLATE.md` |
-| 실행 | `Makefile`, `scripts/{env.sh,install_packages.sh,run_pytest.sh,launchd.sh}` |
+| 실행 | `Makefile`, `scripts/{install_packages.sh,run_pytest.sh,launchd.sh}` |
 | 설정·잠금 | `jipsa/core/{config.py,lock.py,profile.py}` |
 | DB | `jipsa/db/session.py`, `LlmRun` 모델, Alembic 설정 (SQLite batch mode) |
 | LLM | `jipsa/llm/claude_cli.py` (headless Claude Code 호출과 `llm_runs` 기록), `jipsa/llm/cost_estimates.py` (WebSearch 허용 조사와 결과 검증 패턴), `jipsa/llm/prompts/` |
 | 프론트 | `frontend/`의 Vite·tsconfig·Prettier·oxlint 설정, `src/api/{client.ts,hooks.ts}`, `src/lib/format.ts`, `make gen-types` (typescript@5.9.3 dlx 우회 포함) |
-| 원격 접속 | `config/Caddyfile`, `scripts/caddy.sh` (15절. 터널 연결기는 공유하고 `tunnel.sh`는 가져오지 않음) |
+| 원격 접속 | 별도 edge 레포 (Cloudflare Tunnel + Caddy, 여러 앱 공용). dongseon에는 가져오지 않음 |
 
 jipsa에서 얻은 교훈도 그대로 적용합니다.
 
@@ -47,7 +47,7 @@ jipsa에서 얻은 교훈도 그대로 적용합니다.
 ### Non-goals
 
 - 항공권·숙소 예약과 결제, 예약 사이트 스크래핑
-- 다중 사용자와 로그인 (원격 접속은 Caddy basic auth 하나를 가구가 공유)
+- 다중 사용자와 로그인 (원격 접속은 edge의 basic auth 하나를 가구가 공유)
 - 실시간 가격 비교 엔진
 - 블로그·리뷰 크롤링
 
@@ -384,7 +384,7 @@ UI 문구는 한국어입니다. 금액은 원래 통화와 KRW 환산을 같이
 
 여행 중에는 휴대폰이 도쿄에, 앱은 집 Mac에 있습니다.
 
-- 원격 접속은 dongseon이 자기 Caddy(basic auth, `config/Caddyfile`)를 `127.0.0.1:8081`에서 띄우고(`com.dongseon.caddy`), 이 Mac에서 이미 돌고 있는 Cloudflare Tunnel 연결기를 같이 씁니다. Cloudflare 대시보드에 `DONGSEON_DOMAIN` → `http://localhost:8081` published route를 하나 추가합니다. 연결기는 대시보드 경로를 따르므로 jipsa 코드에는 dongseon 정보를 넣지 않습니다. (처음 계획은 jipsa Caddyfile에 site block을 추가하는 방식이었으나, 두 레포가 엉키지 않도록 바꿨습니다.)
+- 원격 접속은 별도 edge 레포가 맡습니다. edge의 Caddy 하나가 주소별로 비밀번호를 확인하고 `127.0.0.1:8100`으로 보내며, Cloudflare 대시보드의 dongseon 경로는 edge의 `http://localhost:8080`을 가리킵니다. dongseon 코드에는 Caddy·터널·인증 설정을 두지 않습니다. (처음에는 jipsa Caddyfile에 site block을 두다가 dongseon 자체 Caddy로 바꿨고, 앱이 늘면서 공용 edge로 옮겼습니다.)
 - `dongseon serve`는 launchd로 상시 실행(`com.dongseon.serve`)하고, 일일 잡은 `com.dongseon.daily`입니다. jipsa `scripts/launchd.sh`를 이식합니다.
 - 여행 중 Mac이 잠들거나 꺼지면 앱이 끊깁니다. README에 출발 전 점검 항목(잠자기 방지, 정전 후 자동 시작, 휴대폰 데이터망으로 원격 접속 테스트)을 적습니다.
 - 활성 여행의 일정(순서, 계획 시각, 라벨, 메모, 길찾기 딥링크), 체크리스트, 예약 정보는 service worker와 IndexedDB에 캐시해서 연결이 끊겨도 읽을 수 있게 합니다. Google 영업시간·이동시간·지도 타일은 담지 않습니다 (6절). basic auth 뒤에서 service worker가 정상 동작하는지 원격 도메인으로 확인합니다.
@@ -509,7 +509,7 @@ DONGSEON_PORT=8100
 DONGSEON_DEV_PORT=8101
 ```
 
-원격 접속 값(`DONGSEON_DOMAIN`, `DONGSEON_AUTH_USER`, `DONGSEON_AUTH_HASH`, `DONGSEON_PROXY_PORT=8081`)도 dongseon `.env`에 둡니다.
+원격 접속 값(도메인, 아이디, 비밀번호 해시)은 edge 레포의 `.env`에 둡니다.
 
 `config/profile.example.yaml` (예시 값)
 

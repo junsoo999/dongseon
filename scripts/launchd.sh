@@ -12,11 +12,9 @@ show_help() {
     echo "Jobs:"
     echo "  serve         the built app on 127.0.0.1:8100, always on (restarted if it exits)"
     echo "  daily         'dongseon daily' every day (default 06:00): live prices, then AI scouting"
-    echo "  caddy         Caddy (basic auth) on 127.0.0.1:\$DONGSEON_PROXY_PORT (default 8081) in front of serve"
-    echo "                (the Cloudflare tunnel connector is shared, see README)"
     echo
     echo "Options:"
-    echo "  --job NAME      serve | caddy | daily (default: serve)"
+    echo "  --job NAME      serve | daily (default: serve)"
     echo "  --hour H        daily only: hour of day (0-23, default 6)"
     echo "  --minute M      daily only: minute (0-59, default 0)"
     echo "  -h, --help      Show this help message"
@@ -25,7 +23,6 @@ show_help() {
     echo "  $0 install --job serve              # builds the frontend first"
     echo "  $0 status --job serve"
     echo "  $0 restart --job serve              # after pulling new code (rebuilds the frontend)"
-    echo "  $0 install --job caddy              # validates config/Caddyfile first"
     echo "  $0 uninstall --job serve"
 }
 
@@ -77,12 +74,6 @@ case "$JOB" in
         WHEN="$(printf 'every day at %02d:%02d' "$HOUR" "$MINUTE")"
         LOG="$LOG_DIR/launchd-daily.log"
         ;;
-    caddy)
-        LABEL="com.dongseon.caddy"
-        PROGRAM="<string>/bin/bash</string><string>$WORKSPACE_PATH/scripts/caddy.sh</string><string>run</string>"
-        WHEN="always (HTTP on 127.0.0.1, behind the tunnel)"
-        LOG="$LOG_DIR/caddy.log"
-        ;;
     *)
         echo "Unknown job: $JOB"
         show_help
@@ -114,9 +105,6 @@ case "$COMMAND" in
         fi
         if [[ "$JOB" == "serve" ]]; then
             build_frontend
-        fi
-        if [[ "$JOB" == "caddy" ]]; then
-            bash "$WORKSPACE_PATH/scripts/caddy.sh" validate
         fi
         mkdir -p "$HOME/Library/LaunchAgents" "$LOG_DIR"
         cat > "$PLIST" <<PLIST_EOF

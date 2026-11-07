@@ -1,4 +1,4 @@
-.PHONY: install dev serve backend frontend lint fmt test gen-types db-upgrade usage launchd-install daily prices scout launchd-uninstall launchd-status app-restart remote-hash remote-check clean help
+.PHONY: install dev serve backend frontend lint fmt test gen-types db-upgrade usage launchd-install daily prices scout launchd-uninstall launchd-status app-restart clean help
 
 # Default python version
 PYTHON_VERSION ?= 3.12
@@ -76,7 +76,7 @@ db-upgrade:
 usage:
 	@uv run --no-sync dongseon usage
 
-# Always-on services and the daily job via macOS launchd (JOB=serve|caddy|daily)
+# Always-on services and the daily job via macOS launchd (JOB=serve|daily)
 JOB ?= serve
 HOUR ?= 6
 MINUTE ?= 0
@@ -102,13 +102,6 @@ prices:
 
 scout:
 	@uv run --no-sync dongseon scout
-
-# Remote access (Caddy basic auth behind the Cloudflare tunnel; see README)
-remote-hash:
-	@bash scripts/caddy.sh hash
-
-remote-check:
-	@bash scripts/caddy.sh validate
 
 # Clean caches and build artifacts
 clean:
@@ -140,11 +133,9 @@ help:
 	@echo "  daily      - Live prices then AI scouting (what launchd JOB=daily runs)"
 	@echo "  prices     - Ignav fares + Rakuten Travel vacancies for upcoming trips"
 	@echo "  scout      - AI research for places and stays (Claude Code)"
-	@echo "  launchd-install   - Install an always-on service via launchd (serve: 127.0.0.1:8100, caddy) ([JOB=serve|caddy|daily] [HOUR=6])"
-	@echo "  launchd-uninstall - Remove a launchd agent ([JOB=serve|caddy])"
-	@echo "  launchd-status    - Show agent state and last log lines ([JOB=serve|caddy])"
+	@echo "  launchd-install   - Install an always-on service via launchd (serve: 127.0.0.1:8100) ([JOB=serve|daily] [HOUR=6])"
+	@echo "  launchd-uninstall - Remove a launchd agent ([JOB=serve|daily])"
+	@echo "  launchd-status    - Show agent state and last log lines ([JOB=serve|daily])"
 	@echo "  app-restart       - Rebuild the frontend and restart the always-on app"
-	@echo "  remote-hash       - Hash a password for DONGSEON_AUTH_HASH (remote access basic auth)"
-	@echo "  remote-check      - Validate config/Caddyfile with the values from .env"
 	@echo "  clean      - Remove caches and build artifacts"
 	@echo "  help       - Show this help message"
