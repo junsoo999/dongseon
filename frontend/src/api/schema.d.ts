@@ -660,6 +660,90 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/itineraries/{itinerary_id}/edit': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Edit Itinerary
+     * @description Save the user's order, dates, locks and removals as a new version (optionally re-solving the rest).
+     */
+    post: operations['edit_itinerary_api_itineraries__itinerary_id__edit_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/itineraries/{itinerary_id}/resolve': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Resolve Itinerary
+     * @description Re-solve a version: locked visits stay on their date and in their order, removed pins stay out.
+     */
+    post: operations['resolve_itinerary_api_itineraries__itinerary_id__resolve_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/itineraries/{itinerary_id}/restore': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Restore Itinerary
+     * @description Make a new version with an older version's layout, timed with today's hours and settings.
+     */
+    post: operations['restore_itinerary_api_itineraries__itinerary_id__restore_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/pins/{pin_id}/hours/{day}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Set Hours
+     * @description Set the user's hours for a pin's place on a date (replaces an earlier user entry).
+     */
+    put: operations['set_hours_api_trips__trip_id__pins__pin_id__hours__day__put']
+    post?: never
+    /**
+     * Clear Hours
+     * @description Remove the user's entry so the next source (Google, AI research) applies again.
+     */
+    delete: operations['clear_hours_api_trips__trip_id__pins__pin_id__hours__day__delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/jobs/{name}': {
     parameters: {
       query?: never
@@ -813,6 +897,19 @@ export interface components {
       currency: string
     }
     /**
+     * DayLayoutIn
+     * @description Pins of one date in visiting order.
+     */
+    DayLayoutIn: {
+      /**
+       * Date
+       * Format: date
+       */
+      date: string
+      /** Pin Ids */
+      pin_ids: number[]
+    }
+    /**
      * DayOut
      * @description One day of the plan.
      */
@@ -850,6 +947,28 @@ export interface components {
       priority: string
       /** Reason */
       reason: string
+      /**
+       * Excluded
+       * @default false
+       */
+      excluded: boolean
+    }
+    /**
+     * EditIn
+     * @description A user-edited layout. ``resolve`` re-solves the unlocked pins; otherwise the layout is timed as given.
+     */
+    EditIn: {
+      /** Days */
+      days: components['schemas']['DayLayoutIn'][]
+      /** Locked */
+      locked?: number[]
+      /** Excluded */
+      excluded?: number[]
+      /**
+       * Resolve
+       * @default false
+       */
+      resolve: boolean
     }
     /**
      * EvaluationOut
@@ -1170,6 +1289,42 @@ export interface components {
       areas: components['schemas']['AreaVacanciesOut'][]
     }
     /**
+     * HoursIn
+     * @description Open with a time range, or closed. A close at or before the open time means after midnight.
+     */
+    HoursIn: {
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: 'open' | 'closed'
+      /** Open */
+      open?: string | null
+      /** Close */
+      close?: string | null
+    }
+    /**
+     * HoursOut
+     * @description A stored user entry.
+     */
+    HoursOut: {
+      /** Pin Id */
+      pin_id: number
+      /**
+       * Day
+       * Format: date
+       */
+      day: string
+      /** Status */
+      status: string
+      /** Open Min */
+      open_min: number | null
+      /** Close Min */
+      close_min: number | null
+      /** Source */
+      source: string
+    }
+    /**
      * ItemOut
      * @description A planned visit. Times are estimates; ``hours`` names the opening-hours source.
      */
@@ -1202,6 +1357,10 @@ export interface components {
       move_mode: string | null
       /** Hours */
       hours: string | null
+      /** Hours Source */
+      hours_source: string | null
+      /** Locked */
+      locked: boolean
       /** Warnings */
       warnings: string[]
     }
@@ -3089,6 +3248,171 @@ export interface operations {
         content: {
           'application/json': components['schemas']['ItineraryOut']
         }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  edit_itinerary_api_itineraries__itinerary_id__edit_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        itinerary_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EditIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ItineraryOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  resolve_itinerary_api_itineraries__itinerary_id__resolve_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        itinerary_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ItineraryOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  restore_itinerary_api_itineraries__itinerary_id__restore_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        itinerary_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ItineraryOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  set_hours_api_trips__trip_id__pins__pin_id__hours__day__put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+        pin_id: number
+        day: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['HoursIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HoursOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  clear_hours_api_trips__trip_id__pins__pin_id__hours__day__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+        pin_id: number
+        day: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Validation Error */
       422: {

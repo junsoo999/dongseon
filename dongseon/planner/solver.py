@@ -3,6 +3,10 @@
 Each trip day is one vehicle that starts and ends at that night's stay. Each pin gets one node per day it may be
 visited (its opening hours differ by date); a disjunction lets at most one copy be used, with a drop penalty from
 its priority. Times are minutes from 00:00 of the first trip day, so one time dimension spans the whole trip.
+
+A locked stop (the user fixed its day and its order among that day's locked stops) gets one copy on that day, a
+penalty no other stop can outweigh, and precedence constraints. Final times always come from :func:`schedule`
+(earliest start along the chosen order), which also times user-edited layouts.
 """
 
 import itertools
@@ -13,6 +17,7 @@ from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 from ortools.util import optional_boolean_pb2
 
 DAY_MIN = 24 * 60
+LOCK_PENALTY = 10**9  # far above any priority penalty: drop a locked stop only if it cannot fit at all
 
 Window = tuple[int, int]  # local minutes on that day
 
@@ -36,6 +41,7 @@ class Stop:
     dwell_min: int
     penalty: int
     windows: dict[int, list[Window]]  # day index -> windows when the visit may start..end (local minutes)
+    lock: tuple[int, int] | None = None  # (day index, order among that day's locked stops)
 
 
 @dataclass(frozen=True)
@@ -48,6 +54,7 @@ class Visit:
     start: int
     end: int
     move_min: int  # travel from the previous stop or the stay
+    in_window: bool = True  # False when no opening window fits (only for forced, user-placed visits)
 
 
 @dataclass
@@ -73,6 +80,44 @@ def _usable(windows: list[Window], dwell: int, day: Day) -> list[Window]:
         if hi >= lo:
             out.append((lo, hi))
     return out
+
+
+def schedule(
+    day: Day, stops: list[Stop], travel: Callable[[object, object], int]
+) -> tuple[list[Visit], tuple[int, int]]:
+    """Time a fixed order of stops on one day at the earliest possible starts.
+
+    A stop starts at the first usable window it can still reach; when none fits (closed, or too late) it starts on
+    arrival and is marked ``in_window=False``. Late finishes are not cut: the validator reports them.
+
+    Returns:
+        The visits in absolute trip minutes and (arrival back at the stay, minutes of that move).
+    """
+    t = day.start_min
+    prev = day.depot
+    visits: list[Visit] = []
+    for s in stops:
+        m = 0 if s.point is prev else int(travel(prev, s.point))
+        arrive = t + m
+        start, fits = arrive, False
+        for lo, hi in _usable(s.windows.get(day.index, []), s.dwell_min, day):
+            if arrive <= hi:
+                start, fits = max(arrive, lo), True
+                break
+        visits.append(
+            Visit(
+                key=s.key,
+                day=day.index,
+                arrive=_abs(day.index, arrive),
+                start=_abs(day.index, start),
+                end=_abs(day.index, start + s.dwell_min),
+                move_min=m,
+                in_window=fits,
+            )
+        )
+        t, prev = start + s.dwell_min, s.point
+    back = 0 if prev is day.depot else int(travel(prev, day.depot))
+    return visits, (_abs(day.index, t + back), back)
 
 
 def solve(
@@ -113,6 +158,8 @@ def solve(
     by_key = {s.key: s for s in stops}
     for s in stops:
         for d in days:
+            if s.lock and s.lock[0] != d.index:
+                continue
             usable = _usable(s.windows.get(d.index, []), s.dwell_min, d)
             if not usable:
                 continue
@@ -176,7 +223,16 @@ def solve(
             for (_a, b), (c, _d) in itertools.pairwise(ranges):
                 if c > b + 1:
                     cumul.RemoveInterval(b + 1, c - 1)
-        routing.AddDisjunction(indices, by_key[key].penalty, 1)
+        stop = by_key[key]
+        routing.AddDisjunction(indices, LOCK_PENALTY if stop.lock else stop.penalty, 1)
+    # Locked stops keep their order within a day.
+    locked = sorted((s.lock, s.key) for s in stops if s.lock and s.key in copies)
+    for (la, ka), (lb, kb) in itertools.pairwise(locked):
+        if la[0] != lb[0]:
+            continue
+        a = manager.NodeToIndex(copies[ka][0][0])
+        b = manager.NodeToIndex(copies[kb][0][0])
+        routing.solver().Add(time_dim.CumulVar(a) + by_key[ka].dwell_min <= time_dim.CumulVar(b))
 
     params = pywrapcp.DefaultRoutingSearchParameters()
     params.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
@@ -195,25 +251,13 @@ def solve(
 
     visited: set[int] = set()
     for v, d in enumerate(days):
-        idx = routing.Start(v)
-        prev_node = manager.IndexToNode(idx)
-        prev_end = solution.Value(time_dim.CumulVar(idx))
-        visits: list[Visit] = []
-        idx = solution.Value(routing.NextVar(idx))
+        order: list[Stop] = []
+        idx = solution.Value(routing.NextVar(routing.Start(v)))
         while not routing.IsEnd(idx):
-            node = manager.IndexToNode(idx)
-            key = nodes[node][1]
-            m = move(prev_node, node)
-            start = solution.Value(time_dim.CumulVar(idx))
-            visits.append(
-                Visit(key=key, day=d.index, arrive=prev_end + m, start=start, end=start + service[node], move_min=m)
-            )
-            visited.add(key)
-            prev_node, prev_end = node, start + service[node]
+            order.append(by_key[nodes[manager.IndexToNode(idx)][1]])
             idx = solution.Value(routing.NextVar(idx))
-        back = move(prev_node, manager.IndexToNode(idx))
-        plan.days[d.index] = visits
-        plan.day_end[d.index] = (prev_end + back, back)
+        plan.days[d.index], plan.day_end[d.index] = schedule(d, order, travel)
+        visited.update(s.key for s in order)
     for s in stops:
         if s.key not in visited and s.key not in plan.dropped:
             plan.dropped[s.key] = "하루 시간 안에 넣지 못했습니다 (우선순위가 높은 곳 먼저)"

@@ -1,11 +1,14 @@
 """Build and store an itinerary: gather the trip's pins, stays, flights and opening hours, solve, and validate.
 
-Travel times are the straight-line approximation ("근사"); Google opening hours are fetched for must/want pins and
-kept in process memory only.
+Three ways to make a version share one path: a fresh solve, a re-solve that keeps the user's locked visits, and a
+user-edited layout timed as given. Every version is timed by :func:`dongseon.planner.solver.schedule` and checked
+by :func:`_visit_warnings`. Travel times are the straight-line approximation ("근사"); Google opening hours are
+fetched for must/want pins and kept in process memory only.
 """
 
 import json
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -16,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from dongseon.api.routes.flights import _reference
 from dongseon.api.routes.stays import build_score
-from dongseon.core.cities import CityConfig
+from dongseon.core.cities import Approx, CityConfig
 from dongseon.core.config import Settings
 from dongseon.core.profile import Profile, TimeWindow
 from dongseon.db.models import FlightOption, HoursOverride, Itinerary, ItineraryItem, Stay, Trip, TripPin
@@ -24,22 +27,11 @@ from dongseon.flights.evaluate import LegTimes, evaluate
 from dongseon.matrix.approx import approx_leg
 from dongseon.places.service import coords_for
 from dongseon.planner.hours import HOURS_CACHE, DayHours, GoogleHours, OverrideRow, hours_on
-from dongseon.planner.solver import DAY_MIN, Day, Stop, solve
+from dongseon.planner.solver import DAY_MIN, Day, Stop, Visit, schedule, solve
 from dongseon.sources.google_places import GooglePlacesClient, LatLng, PlaceNotFoundError, PlacesError
 
 PENALTY_SCALE = 10_000
 HOURS_FOR = ("must", "want")  # Enterprise lookups only where they matter
-
-
-@dataclass(frozen=True)
-class DayPlanInfo:
-    """Per-day facts stored with the itinerary (for the timeline and warnings)."""
-
-    day: date
-    start_min: int
-    end_min: int
-    depot_label: str
-    warnings: list[str]
 
 
 def _minutes(t: time) -> int:
@@ -88,7 +80,47 @@ def hours_label(h: DayHours) -> str:
     return f"{text} · {src}"
 
 
-def build_itinerary(
+@dataclass(frozen=True)
+class Edit:
+    """A user's layout for a new version.
+
+    Attributes:
+        layout: Pin ids per date, in visiting order.
+        locked: Pins whose date and order a re-solve keeps.
+        excluded: Pins the user took out; a re-solve leaves them out too.
+        resolve: Re-solve the unlocked pins (True) or time the layout exactly as given (False).
+        base_dropped: Reasons from the version being edited, for pins still left out.
+    """
+
+    layout: dict[date, list[int]]
+    locked: frozenset[int] = frozenset()
+    excluded: frozenset[int] = frozenset()
+    resolve: bool = False
+    base_dropped: dict[int, str] = field(default_factory=dict)
+
+
+@dataclass
+class PlanContext:
+    """Everything a version needs: days, stops with per-day windows, opening hours and the travel function."""
+
+    trip: Trip
+    city: CityConfig
+    tz: ZoneInfo
+    dates: list[date]
+    days: list[Day]
+    depot_labels: dict[int, str]
+    depot_points: dict[int, dict[str, object]]  # user or config data only: {"lat", "lng"} or {"place_id"}
+    day_warnings: dict[int, list[str]]
+    pins: dict[int, TripPin]
+    stops: dict[int, Stop]
+    hours: dict[int, dict[int, DayHours]]
+    unplaceable: dict[int, str]
+    meals: dict[str, tuple[int, int]]
+    approx: Approx
+    travel: Callable[[object, object], int]
+
+
+def prepare(
     session: Session,
     *,
     trip: Trip,
@@ -97,9 +129,8 @@ def build_itinerary(
     settings: Settings,
     http: httpx.Client | None,
     client: GooglePlacesClient | None,
-    time_limit_s: int = 3,
-) -> Itinerary:
-    """Solve the trip and store the result as a new active version (older versions become archived)."""
+) -> PlanContext:
+    """Gather days, depots, opening hours and stops for a trip."""
     if city.approx is None:
         raise HTTPException(status_code=422, detail="이 도시에는 이동시간 근사 설정(approx)이 없습니다")
     approx = city.approx
@@ -120,11 +151,6 @@ def build_itinerary(
     ref_label, _kind, access = _reference(session, trip, score)
     fallback_area = next(
         (a for a in city.stay_areas if a.label == ref_label), city.stay_areas[0] if city.stay_areas else None
-    )
-    fallback = (
-        (LatLng(fallback_area.lat, fallback_area.lng), fallback_area.label)
-        if fallback_area and fallback_area.lat is not None and fallback_area.lng is not None
-        else None
     )
 
     # Day windows, adjusted for the booked flight.
@@ -147,6 +173,7 @@ def build_itinerary(
     # Depots: the stay of that night (or of the night before on the last day), else the reference area.
     days: list[Day] = []
     depot_labels: dict[int, str] = {}
+    depot_points: dict[int, dict[str, object]] = {}
     for i, d in enumerate(dates):
         stay = next((s for s in stays if s.check_in and s.check_out and s.check_in <= d < s.check_out), None) or next(
             (s for s in stays if s.check_in and s.check_out and s.check_in < d <= s.check_out), None
@@ -154,8 +181,14 @@ def build_itinerary(
         point = _stay_point(stay, coords) if stay else None
         if point and stay:
             depot_labels[i] = stay.label
-        elif fallback:
-            point, depot_labels[i] = fallback[0], f"{fallback[1]} (숙소 미확정)"
+            if stay.user_lat is not None and stay.user_lng is not None:
+                depot_points[i] = {"lat": stay.user_lat, "lng": stay.user_lng}
+            elif stay.place and stay.place.google_place_id:
+                depot_points[i] = {"place_id": stay.place.google_place_id}
+        elif fallback_area and fallback_area.lat is not None and fallback_area.lng is not None:
+            point = LatLng(fallback_area.lat, fallback_area.lng)
+            depot_labels[i] = f"{fallback_area.label} (숙소 미확정)"
+            depot_points[i] = {"lat": fallback_area.lat, "lng": fallback_area.lng}
         else:
             raise HTTPException(status_code=422, detail="출발점으로 쓸 숙소나 동네 좌표가 없습니다")
         start, end = windows[i]
@@ -163,7 +196,7 @@ def build_itinerary(
             warnings[i].append("이 날은 쓸 수 있는 시간이 1시간도 안 됩니다")
         days.append(Day(i, start, max(start, end), point))
 
-    # Opening hours per pin and date.
+    # Opening hours per pin and date (all dates, so user-placed visits can be checked too).
     overrides: dict[tuple[int, date], list[OverrideRow]] = {}
     for o in session.scalars(select(HoursOverride).where(HoursOverride.place_id.in_([p.place_id for p in pins]))):
         overrides.setdefault((o.place_id, o.day), []).append(
@@ -173,14 +206,15 @@ def build_itinerary(
         )
     horizon = datetime.now(tz).date() + timedelta(days=6)
     meals: dict[str, tuple[int, int]] = {k: _window_minutes(v) for k, v in profile.meal_windows.items()}
-    stops: list[Stop] = []
+    weights = {str(k): v for k, v in profile.priority_weights.items()}
+    stops: dict[int, Stop] = {}
     hours_by_pin: dict[int, dict[int, DayHours]] = {}
-    dropped_extra: dict[int, str] = {}
+    unplaceable: dict[int, str] = {}
     for p in pins:
         gid = p.place.google_place_id
         point = coords.get(gid) if gid else None
         if point is None:
-            dropped_extra[p.id] = "지도 위치가 없어 일정에 넣지 못했습니다"
+            unplaceable[p.id] = "지도 위치가 없어 일정에 넣지 못했습니다"
             continue
         google: GoogleHours | None = None
         if client and gid and p.priority in HOURS_FOR:
@@ -191,8 +225,6 @@ def build_itinerary(
         per_day: dict[int, list[tuple[int, int]]] = {}
         hours_by_pin[p.id] = {}
         for i, d in enumerate(dates):
-            if p.locked_date and p.locked_date != d:
-                continue
             h = hours_on(
                 d,
                 google,
@@ -201,7 +233,7 @@ def build_itinerary(
                 special_horizon=horizon,
             )
             hours_by_pin[p.id][i] = h
-            if h.status == "closed":
+            if h.status == "closed" or (p.locked_date and p.locked_date != d):
                 continue
             wins = h.windows if h.status == "open" else [(0, DAY_MIN)]
             if p.meal in meals:
@@ -211,19 +243,111 @@ def build_itinerary(
                 wins = [(t, t + p.dwell_min)] if 0 <= t < DAY_MIN else []
             if wins:
                 per_day[i] = wins
-        weight = {str(k): v for k, v in profile.priority_weights.items()}.get(p.priority, 1)
-        stops.append(Stop(p.id, point, p.dwell_min, weight * PENALTY_SCALE, per_day))
+        stops[p.id] = Stop(p.id, point, p.dwell_min, weights.get(p.priority, 1) * PENALTY_SCALE, per_day)
 
     def travel(a: object, b: object) -> int:
         assert isinstance(a, LatLng) and isinstance(b, LatLng)
         leg = approx_leg(a, b, approx)
         return leg.minutes + (profile.buffers_min.transfer if leg.mode == "rail" else 0)
 
-    plan = solve(days, stops, travel, time_limit_s=time_limit_s)
-    by_id = {p.id: p for p in pins}
-    stop_map = stops_by_key(stops)
+    return PlanContext(
+        trip=trip,
+        city=city,
+        tz=tz,
+        dates=dates,
+        days=days,
+        depot_labels=depot_labels,
+        depot_points=depot_points,
+        day_warnings=warnings,
+        pins={p.id: p for p in pins},
+        stops=stops,
+        hours=hours_by_pin,
+        unplaceable=unplaceable,
+        meals=meals,
+        approx=approx,
+        travel=travel,
+    )
 
-    # Store.
+
+def _check_layout(ctx: PlanContext, layout: dict[date, list[int]]) -> dict[int, list[int]]:
+    """Map a date layout to day indexes, rejecting unknown dates, unknown or unplaceable pins and duplicates."""
+    index = {d: i for i, d in enumerate(ctx.dates)}
+    out: dict[int, list[int]] = {}
+    seen: set[int] = set()
+    for d, pin_ids in layout.items():
+        if d not in index:
+            raise HTTPException(status_code=422, detail=f"여행 기간이 아닌 날짜입니다: {d.isoformat()}")
+        for pid in pin_ids:
+            if pid not in ctx.pins:
+                raise HTTPException(status_code=422, detail="이 여행의 장소가 아닙니다")
+            if pid not in ctx.stops:
+                raise HTTPException(status_code=422, detail=f"지도 위치가 없는 장소는 넣을 수 없습니다: {pid}")
+            if pid in seen:
+                raise HTTPException(status_code=422, detail="같은 장소가 두 번 들어 있습니다")
+            seen.add(pid)
+        out[index[d]] = list(pin_ids)
+    return out
+
+
+def _solve_layout(
+    ctx: PlanContext, edit: Edit | None, time_limit_s: int
+) -> tuple[dict[int, list[int]], dict[int, str], str]:
+    """Solve for an order per day, keeping locked pins on their date and in their order."""
+    excluded = edit.excluded if edit else frozenset()
+    locks: dict[int, tuple[int, int]] = {}
+    if edit:
+        for i, pin_ids in _check_layout(ctx, edit.layout).items():
+            for order, pid in enumerate(p for p in pin_ids if p in edit.locked):
+                locks[pid] = (i, order)
+    stops: list[Stop] = []
+    for pid, stop in ctx.stops.items():
+        if pid in excluded:
+            continue
+        if pid in locks:
+            i = locks[pid][0]
+            # The user placed it here: keep it even if its hours do not fit (the validator warns).
+            wins = stop.windows.get(i) or [(0, DAY_MIN)]
+            stop = replace(stop, windows={i: wins}, lock=locks[pid])
+        stops.append(stop)
+    plan = solve(ctx.days, stops, ctx.travel, time_limit_s=time_limit_s)
+    layout = {i: [v.key for v in plan.days.get(i, [])] for i in range(len(ctx.days))}
+    return layout, plan.dropped, plan.status
+
+
+def _visit_warnings(ctx: PlanContext, i: int, pin: TripPin, visit: Visit, h: DayHours | None) -> list[str]:
+    """Warnings for one visit: hours, holidays, the pin's fixed date and reservation."""
+    w: list[str] = []
+    if h and h.status == "closed":
+        w.append("이 날은 휴무입니다")
+    elif not visit.in_window:
+        w.append("영업시간(식사 시간대) 안에 들어가지 않습니다" if pin.meal else "영업시간 안에 들어가지 않습니다")
+    if h and h.holiday_unconfirmed:
+        w.append("연휴 기간 영업 미확인")
+    if h and h.source == "ai_research":
+        w.append("AI 조사 기준 영업시간")
+    d = ctx.dates[i]
+    if pin.locked_date and pin.locked_date != d:
+        w.append(f"고정한 날짜({pin.locked_date.month}/{pin.locked_date.day})와 다릅니다")
+    if pin.reserved_start:
+        reserved = pin.reserved_start.astimezone(ctx.tz)
+        if reserved.date() != d or _minutes(reserved.time()) != visit.start - i * DAY_MIN:
+            w.append(f"예약 시각({reserved.month}/{reserved.day} {reserved:%H:%M})과 다릅니다")
+    return w
+
+
+def _store(
+    session: Session,
+    ctx: PlanContext,
+    layout: dict[int, list[int]],
+    *,
+    origin: str,
+    locked: frozenset[int],
+    excluded: frozenset[int],
+    dropped: dict[int, str],
+    status: str = "ok",
+) -> Itinerary:
+    """Time, validate and save a layout as the new active version (older versions become archived)."""
+    trip = ctx.trip
     for old in session.scalars(select(Itinerary).where(Itinerary.trip_id == trip.id, Itinerary.status == "active")):
         old.status = "archived"
     version = (
@@ -232,40 +356,36 @@ def build_itinerary(
         )
         or 0
     ) + 1
-    itinerary = Itinerary(trip_id=trip.id, version=version, origin="solver", created_at=datetime.now(UTC))
+    itinerary = Itinerary(trip_id=trip.id, version=version, origin=origin, created_at=datetime.now(UTC))
     session.add(itinerary)
 
-    def at(i: int, abs_min: int) -> datetime:
-        local = datetime.combine(dates[0], time(0), tz) + timedelta(minutes=abs_min)
+    def at(abs_min: int) -> datetime:
+        local = datetime.combine(ctx.dates[0], time(0), ctx.tz) + timedelta(minutes=abs_min)
         return local.astimezone(UTC)
 
+    meals = ctx.meals
     day_stats = {}
-    for i, d in enumerate(dates):
-        visits = plan.days.get(i, [])
-        prev = days[i].depot
+    for i, d in enumerate(ctx.dates):
+        day = ctx.days[i]
+        order = [ctx.stops[pid] for pid in layout.get(i, [])]
+        visits, (back_abs, back_move) = schedule(day, order, ctx.travel)
+        prev = day.depot
         lunch = dinner = False
         for seq, v in enumerate(visits):
-            pin = by_id[v.key]
-            h = hours_by_pin.get(pin.id, {}).get(i)
-            w: list[str] = []
-            if h and h.holiday_unconfirmed:
-                w.append("연휴 기간 영업 미확인")
-            if h and h.source == "ai_research":
-                w.append("AI 조사 기준 영업시간")
-            here = stop_map[v.key].point
+            pin = ctx.pins[v.key]
+            h = ctx.hours.get(pin.id, {}).get(i)
+            here = ctx.stops[v.key].point
             assert isinstance(prev, LatLng) and isinstance(here, LatLng)
-            mode = approx_leg(prev, here, approx).mode
+            mode = approx_leg(prev, here, ctx.approx).mode
             prev = here
-            local_start = v.start - i * DAY_MIN
-            for meal, flag in (("lunch", "l"), ("dinner", "d")):
+            local_start, local_end = v.start - i * DAY_MIN, v.end - i * DAY_MIN
+            for meal in ("lunch", "dinner"):
                 lo, hi = meals.get(meal, (0, 0))
                 eats = pin.meal == meal or (
-                    pin.place.category in ("food", "cafe") and local_start < hi and v.end - i * DAY_MIN > lo
+                    pin.place.category in ("food", "cafe") and local_start < hi and local_end > lo
                 )
-                if eats and flag == "l":
-                    lunch = True
-                if eats and flag == "d":
-                    dinner = True
+                lunch = lunch or (eats and meal == "lunch")
+                dinner = dinner or (eats and meal == "dinner")
             itinerary.items.append(
                 ItineraryItem(
                     day=d,
@@ -273,42 +393,66 @@ def build_itinerary(
                     kind="meal" if pin.meal else "visit",
                     pin_id=pin.id,
                     label=pin.place.label,
-                    start_at=at(i, v.start),
-                    end_at=at(i, v.end),
+                    start_at=at(v.start),
+                    end_at=at(v.end),
                     move_mode=mode if v.move_min else None,
                     move_min=v.move_min,
+                    locked=pin.id in locked,
                     warnings_json=json.dumps(
-                        {"warnings": w, "hours": hours_label(h) if h else None}, ensure_ascii=False
+                        {
+                            "warnings": _visit_warnings(ctx, i, pin, v, h),
+                            "hours": hours_label(h) if h else None,
+                            "hours_source": h.source if h else None,
+                        },
+                        ensure_ascii=False,
                     ),
                 )
             )
-        dw = list(warnings[i])
-        if visits and not lunch and days[i].start_min <= meals.get("lunch", (0, 0))[0]:
+        dw = list(ctx.day_warnings[i])
+        return_min = back_abs - i * DAY_MIN
+        if visits and return_min > day.end_min:
+            over = return_min - day.end_min
+            dw.append(f"하루 끝({day.end_min // 60:02d}:{day.end_min % 60:02d})보다 {over}분 늦게 돌아옵니다")
+        if visits and not lunch and day.start_min <= meals.get("lunch", (0, 0))[0]:
             dw.append("점심 일정이 없습니다")
-        if visits and not dinner and days[i].end_min >= meals.get("dinner", (0, 0))[1]:
+        if visits and not dinner and day.end_min >= meals.get("dinner", (0, 0))[1]:
             dw.append("저녁 일정이 없습니다")
-        holidays = city.holidays_on(d)
+        holidays = ctx.city.holidays_on(d)
         if holidays:
             dw.append(f"연휴 기간: {holidays[0].note.split('.')[0]}")
-        back = plan.day_end.get(i)
         day_stats[d.isoformat()] = {
-            "start_min": days[i].start_min,
-            "end_min": days[i].end_min,
-            "depot": depot_labels[i],
-            "return_min": (back[0] - i * DAY_MIN) if back else None,
-            "return_move_min": back[1] if back else None,
+            "start_min": day.start_min,
+            "end_min": day.end_min,
+            "depot": ctx.depot_labels[i],
+            "depot_point": ctx.depot_points.get(i),
+            "return_min": return_min if visits else None,
+            "return_move_min": back_move if visits else None,
             "warnings": dw,
         }
-    dropped = {**dropped_extra, **plan.dropped}
+    placed = {pid for pids in layout.values() for pid in pids}
+    left_out = {pid: ctx.unplaceable[pid] for pid in ctx.unplaceable}
+    for pid in ctx.stops:
+        if pid in placed:
+            continue
+        if pid in excluded:
+            left_out[pid] = "직접 뺐습니다"
+        else:
+            left_out[pid] = dropped.get(pid, "일정에 넣지 않았습니다")
     itinerary.solver_stats_json = json.dumps(
         {
-            "status": plan.status,
+            "status": status,
             "approx": True,
             "days": day_stats,
+            "excluded": sorted(excluded & set(ctx.pins)),
             "dropped": [
-                {"pin_id": k, "label": by_id[k].place.label, "priority": by_id[k].priority, "reason": r}
-                for k, r in dropped.items()
-                if k in by_id
+                {
+                    "pin_id": k,
+                    "label": ctx.pins[k].place.label,
+                    "priority": ctx.pins[k].priority,
+                    "reason": r,
+                    "excluded": k in excluded,
+                }
+                for k, r in left_out.items()
             ],
         },
         ensure_ascii=False,
@@ -317,6 +461,45 @@ def build_itinerary(
     return itinerary
 
 
-def stops_by_key(stops: list[Stop]) -> dict[int, Stop]:
-    """Index stops by pin id."""
-    return {s.key: s for s in stops}
+def build_itinerary(
+    session: Session,
+    *,
+    trip: Trip,
+    city: CityConfig,
+    profile: Profile,
+    settings: Settings,
+    http: httpx.Client | None,
+    client: GooglePlacesClient | None,
+    edit: Edit | None = None,
+    time_limit_s: int = 3,
+) -> Itinerary:
+    """Make and store a new active version.
+
+    Args:
+        session: DB session; the caller commits.
+        trip: The trip.
+        city: Its city config (approximation parameters, stay areas, holidays).
+        profile: Household preferences (day windows, meals, buffers, priority weights).
+        settings: App settings.
+        http: HTTP client for the stay score (FX), or ``None``.
+        client: Places client for coordinates and opening hours, or ``None`` without a key.
+        edit: ``None`` for a fresh solve; otherwise the user's layout, re-solved around locked pins or timed as is.
+        time_limit_s: Solver time limit.
+    """
+    ctx = prepare(session, trip=trip, city=city, profile=profile, settings=settings, http=http, client=client)
+    if edit is None or edit.resolve:
+        layout, dropped, status = _solve_layout(ctx, edit, time_limit_s)
+        origin = "solver"
+    else:
+        layout, dropped, status = _check_layout(ctx, edit.layout), edit.base_dropped, "ok"
+        origin = "user"
+    return _store(
+        session,
+        ctx,
+        layout,
+        origin=origin,
+        locked=edit.locked if edit else frozenset(),
+        excluded=edit.excluded if edit else frozenset(),
+        dropped=dropped,
+        status=status,
+    )

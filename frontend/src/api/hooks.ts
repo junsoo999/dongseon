@@ -24,6 +24,9 @@ import {
   type HotelsOut,
   type FarePrefsIO,
   type FarePrefsOut,
+  type EditIn,
+  type HoursIn,
+  type HoursOut,
   type ItineraryOut,
   type VersionOut,
   type SuggestionOut,
@@ -350,14 +353,59 @@ export function useItineraryVersions(tripId: number | null) {
   })
 }
 
-export function useSolveItinerary(tripId: number | null) {
+function useNewVersion<V>(tripId: number | null, send: (v: V) => Promise<ItineraryOut>) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => apiSend<ItineraryOut>('POST', `/trips/${tripId}/itineraries/solve`),
+    mutationFn: send,
     onSuccess: (data) => {
       qc.setQueryData(['itinerary', tripId], data)
       void qc.invalidateQueries({ queryKey: ['itineraryVersions', tripId] })
       void qc.invalidateQueries({ queryKey: ['usage'] })
     },
+  })
+}
+
+export function useSolveItinerary(tripId: number | null) {
+  return useNewVersion<void>(tripId, () =>
+    apiSend<ItineraryOut>('POST', `/trips/${tripId}/itineraries/solve`),
+  )
+}
+
+/** Save an edited layout as a new version (``resolve`` re-solves the unlocked pins). */
+export function useEditItinerary(tripId: number | null) {
+  return useNewVersion<{ id: number; body: EditIn }>(tripId, ({ id, body }) =>
+    apiSend<ItineraryOut>('POST', `/itineraries/${id}/edit`, body),
+  )
+}
+
+/** Re-solve keeping locked visits and removed pins. */
+export function useResolveItinerary(tripId: number | null) {
+  return useNewVersion<number>(tripId, (id) =>
+    apiSend<ItineraryOut>('POST', `/itineraries/${id}/resolve`),
+  )
+}
+
+/** Make a new version from an older version's layout. */
+export function useRestoreItinerary(tripId: number | null) {
+  return useNewVersion<number>(tripId, (id) =>
+    apiSend<ItineraryOut>('POST', `/itineraries/${id}/restore`),
+  )
+}
+
+export function useItinerary(id: number | null) {
+  return useQuery({
+    queryKey: ['itineraryVersion', id],
+    queryFn: () => apiGet<ItineraryOut>(`/itineraries/${id}`),
+    enabled: id !== null,
+  })
+}
+
+/** Set (``body``) or clear (``body: null``) the user's hours for a pin on a date. */
+export function useSetHours(tripId: number | null) {
+  return useMutation({
+    mutationFn: ({ pinId, day, body }: { pinId: number; day: string; body: HoursIn | null }) =>
+      body
+        ? apiSend<HoursOut>('PUT', `/trips/${tripId}/pins/${pinId}/hours/${day}`, body)
+        : apiSend<null>('DELETE', `/trips/${tripId}/pins/${pinId}/hours/${day}`),
   })
 }

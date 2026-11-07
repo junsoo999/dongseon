@@ -75,3 +75,30 @@ def test_visits_spread_over_days() -> None:
     plan = solve(_days(3), stops, travel, time_limit_s=1)
     assert not plan.dropped
     assert sorted(len(v) for v in plan.days.values()) == [2, 2, 2]
+
+
+def test_locked_stops_keep_day_and_order() -> None:
+    # Without locks the solver would visit 1 (near) before 2 (far) on day 0.
+    stops = [
+        Stop(1, 10, 60, 100_000, {1: ALL_DAY}, lock=(1, 1)),
+        Stop(2, 50, 60, 100_000, {1: ALL_DAY}, lock=(1, 0)),
+        Stop(3, 20, 60, 100_000, {0: ALL_DAY, 1: ALL_DAY}),
+    ]
+    plan = solve(_days(2), stops, travel, time_limit_s=1)
+    day1 = [v.key for v in plan.days[1]]
+    assert day1.index(2) < day1.index(1)
+    assert not plan.dropped
+
+
+def test_schedule_waits_for_opening_and_flags_misses() -> None:
+    from dongseon.planner.solver import schedule
+
+    day = _days(1)[0]
+    stops = [
+        Stop(1, 30, 60, 1, {0: [(10 * 60, 12 * 60)]}),  # opens 10:00
+        Stop(2, 40, 60, 1, {}),  # closed that day
+    ]
+    visits, (back, back_move) = schedule(day, stops, travel)
+    assert visits[0].start == 10 * 60 and visits[0].in_window
+    assert visits[1].start == 11 * 60 + 10 and not visits[1].in_window
+    assert back_move == 40 and back == 12 * 60 + 10 + 40

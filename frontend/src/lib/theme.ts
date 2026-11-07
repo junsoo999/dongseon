@@ -7,6 +7,8 @@ const base =
 
 export const BTN = {
   primary: `${base} bg-teal-700 text-white hover:bg-teal-800`,
+  /** A lighter user action next to a primary one. */
+  soft: `${base} bg-teal-50 text-teal-800 ring-1 ring-teal-200 hover:bg-teal-100`,
   ai: `${base} bg-violet-600 text-white hover:bg-violet-700`,
   live: `${base} bg-sky-600 text-white hover:bg-sky-700`,
   secondary: `${base} border border-gray-300 bg-white font-medium text-gray-800 hover:bg-gray-50`,
