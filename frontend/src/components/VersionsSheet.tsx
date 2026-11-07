@@ -1,17 +1,11 @@
 import { useState } from 'react'
 import type { ItineraryOut } from '../api/client'
 import { useItinerary, useItineraryVersions } from '../api/hooks'
-import { diffVersions } from '../lib/itineraryDiff'
 import { BTN } from '../lib/theme'
 import { BottomSheet } from './BottomSheet'
+import { DiffList } from './DiffList'
 
 const ORIGIN: Record<string, string> = { solver: '자동 계산', user: '직접 수정', ai: 'AI 제안' }
-const KIND_STYLE: Record<string, string> = {
-  added: 'text-teal-700',
-  removed: 'text-red-700',
-  moved: 'text-sky-700',
-  retimed: 'text-gray-600',
-}
 
 function when(iso: string): string {
   return new Date(iso).toLocaleString('ko-KR', {
@@ -39,7 +33,6 @@ export function VersionsSheet({
   const versions = useItineraryVersions(tripId)
   const [picked, setPicked] = useState<number | null>(null)
   const other = useItinerary(picked)
-  const diff = other.data ? diffVersions(current, other.data) : null
 
   return (
     <BottomSheet open title="버전 기록" onClose={onClose}>
@@ -78,22 +71,7 @@ export function VersionsSheet({
           <p className="text-sm font-semibold">
             되돌리면 바뀌는 점 (현재 버전 {current.version} → 버전 {other.data?.version ?? '…'})
           </p>
-          {diff && diff.length === 0 && <p className="text-sm text-gray-500">차이가 없습니다.</p>}
-          {diff?.map((g) => (
-            <div key={g.date}>
-              <p className="text-xs font-semibold text-gray-500">
-                {Number(g.date.slice(5, 7))}/{Number(g.date.slice(8, 10))}
-              </p>
-              <ul className="text-sm">
-                {g.changes.map((c) => (
-                  <li key={`${c.kind}-${c.pinId}`} className="flex justify-between gap-2">
-                    <span className="truncate">{c.label}</span>
-                    <span className={`shrink-0 ${KIND_STYLE[c.kind]}`}>{c.text}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {other.data && <DiffList from={current} to={other.data} />}
           <button
             type="button"
             disabled={restoring || !other.data}

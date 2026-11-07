@@ -50,3 +50,5 @@ categories:
     shopping: 60
     experience: 150
     other: 60
+  # Categories treated as indoor for rain plans (experience mixes zoos and aquariums, so it is not listed).
+  indoor: [food, cafe, bar, museum, shopping]

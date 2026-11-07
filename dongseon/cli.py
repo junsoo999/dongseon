@@ -311,6 +311,102 @@ def scout(
         raise typer.Exit(EXIT_SYSTEM_ERROR)
 
 
+@app.command(help="AI가 일정을 검토해 편집을 제안합니다. --rain 날짜를 주면 그날 비 올 때의 대안을 제안합니다.")
+def review(
+    itinerary: Annotated[
+        int | None, typer.Option("--itinerary", help="이 일정 버전 (기본: 끝나지 않은 여행의 현재 버전)")
+    ] = None,
+    rain: Annotated[str | None, typer.Option("--rain", help="비 오는 날 (YYYY-MM-DD)")] = None,
+    force: Annotated[bool, typer.Option("--force", help="입력이 같아도 다시 검토")] = False,
+) -> None:
+    """Ask headless Claude Code for plan edits, check each one and store them as suggestions."""
+    from dongseon.core.profile import load_profile
+    from dongseon.db.models import Itinerary
+    from dongseon.llm.claude_cli import ClaudeCli, LlmError
+    from dongseon.llm.plan_review import run_review
+    from dongseon.planner.build import prepare
+
+    settings = get_settings()
+    try:
+        rain_date = date.fromisoformat(rain) if rain else None
+    except ValueError as e:
+        raise _fail("--rain은 YYYY-MM-DD 형식입니다") from e
+    upgrade_schema(settings.database_file)
+    engine = get_engine(settings.database_file)
+    defaults = load_defaults(settings.defaults_file)
+    profile_path = (
+        settings.profile_file if settings.profile_file.exists() else REPO_ROOT / "config/profile.example.yaml"
+    )
+    profile = load_profile(profile_path)
+    llm = ClaudeCli(engine, model=settings.llm_model, daily_token_limit=settings.llm_daily_token_limit)
+    status, error, rows = "ok", None, 0
+    try:
+        with job_lock(settings.lock_path, "review"), httpx.Client(timeout=15.0) as http:
+            with session_scope(engine) as session:
+                stmt = select(Itinerary.id).where(Itinerary.status == "active")
+                if itinerary is not None:
+                    stmt = select(Itinerary.id).where(Itinerary.id == itinerary)
+                else:
+                    stmt = stmt.join(Trip, Trip.id == Itinerary.trip_id).where(
+                        Trip.end_date >= datetime.now(UTC).date()
+                    )
+                ids = list(session.scalars(stmt))
+            if not ids:
+                typer.echo("검토할 일정이 없습니다")
+            for it_id in ids:
+                try:
+                    with session_scope(engine) as session:
+                        it = session.get(Itinerary, it_id)
+                        assert it is not None
+                        trip_row = session.get(Trip, it.trip_id)
+                        assert trip_row is not None
+                        city = load_city(settings.cities_path, trip_row.city_key)
+                        client = None
+                        if settings.google_maps_server_key:
+                            meter = make_meter(
+                                session,
+                                defaults.google_free_tier,
+                                warn_ratio=settings.google_free_tier_warn_ratio,
+                                stop_ratio=settings.google_free_tier_stop_ratio,
+                            )
+                            client = GooglePlacesClient(http, settings.google_maps_server_key, meter)
+                        ctx = prepare(
+                            session,
+                            trip=trip_row,
+                            city=city,
+                            profile=profile,
+                            settings=settings,
+                            http=http,
+                            client=client,
+                        )
+                        result = run_review(
+                            session,
+                            llm,
+                            ctx,
+                            it,
+                            profile,
+                            indoor=set(defaults.categories.indoor),
+                            rain_date=rain_date,
+                            force=force,
+                        )
+                    if result.skipped:
+                        typer.echo(f"버전 #{it_id}: 같은 입력의 제안이 이미 있어 건너뜀 (--force로 다시)")
+                    else:
+                        rows += result.stored
+                        typer.echo(
+                            f"버전 #{it_id}: 제안 {result.proposed}건 중 {result.stored}건 저장 "
+                            f"(적용 가능 {result.applicable})"
+                        )
+                except (LlmError, ValueError, FreeTierExceededError, httpx.HTTPError) as e:
+                    status, error = ("quota" if isinstance(e, FreeTierExceededError) else "error"), str(e)[:300]
+                    typer.echo(f"버전 #{it_id} 검토 실패: {e}", err=True)
+    except JobLockedError as e:
+        raise _fail("이미 실행 중입니다", EXIT_LOCKED) from e
+    _log_job(engine, "review", status, rows, error)
+    if status != "ok":
+        raise typer.Exit(EXIT_SYSTEM_ERROR)
+
+
 @app.command(help="실시간 가격을 가져옵니다: Ignav 항공 운임과 楽天トラベル 빈방 (끝나지 않은 여행).")
 def prices(
     trip: Annotated[int | None, typer.Option("--trip", help="이 여행만")] = None,

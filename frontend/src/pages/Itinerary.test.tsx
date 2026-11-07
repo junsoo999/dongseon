@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockApi } from '../test/mockApi'
@@ -151,5 +151,81 @@ describe('Itinerary', () => {
     expect(screen.getByRole('button', { name: '다시 맞추기' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '버전 2 ▾' })).toBeInTheDocument()
     expect(screen.getByText('지도 1곳')).toBeInTheDocument()
+  })
+
+  it('shows AI review notes and edits, previews one and accepts it as a new version', async () => {
+    const edit = (id: number, applicable: boolean, extra = {}) => ({
+      id,
+      source: 'review',
+      date: null,
+      itinerary_version: 2,
+      op: 'move',
+      title: `제안 ${id}`,
+      reason: '가까운 곳끼리 묶습니다',
+      applicable,
+      problems: applicable ? [] : ['박물관: 이 날은 휴무입니다'],
+      created_at: '2026-11-07T00:00:00Z',
+      ...extra,
+    })
+    const moved = {
+      ...itinerary,
+      id: 0,
+      days: [
+        { ...itinerary.days[0], items: [] },
+        { ...itinerary.days[1], items: [{ ...item, start: '09:30', end: '11:30' }] },
+      ],
+    }
+    const fetch = mockApi([
+      [
+        '/plan-suggestions/31/preview',
+        { itinerary: moved, applicable: true, problems: [], resolved: false },
+      ],
+      ['/plan-suggestions/31/accept', { ...itinerary, id: 7, version: 3, origin: 'ai' }],
+      [
+        '/plan-suggestions',
+        {
+          reviews: [
+            {
+              id: 30,
+              source: 'review',
+              date: null,
+              itinerary_version: 2,
+              day_titles: [{ date: '2030-12-28', title: '우에노 산책' }],
+              notes: ['연말에는 붐빕니다'],
+              created_at: '2026-11-07T00:00:00Z',
+            },
+          ],
+          edits: [
+            edit(32, false),
+            edit(31, true),
+            edit(33, true, { source: 'rain', date: '2030-12-28', title: '비 오면 실내로' }),
+          ],
+        },
+      ],
+      ['/itineraries/active', itinerary],
+      ['/api/trips', [trip]],
+    ])
+    renderPage()
+    expect(await screen.findByText('💡 연말에는 붐빕니다')).toBeInTheDocument()
+    expect(screen.getByText(/우에노 산책/)).toBeInTheDocument()
+    expect(screen.getByText('고칠 점 3개 · 적용 가능 2개')).toBeInTheDocument()
+    expect(screen.getByText('⚠ 박물관: 이 날은 휴무입니다')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '☔ 비 오면? · 대안 1' })).toBeInTheDocument()
+
+    const card = screen.getByText('제안 31').closest('li') as HTMLElement
+    fireEvent.click(within(card).getByRole('button', { name: '미리보기' }))
+    expect(await screen.findByText('12/28 → 12/29 이동 (09:30)')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '수락하고 새 버전 만들기' }))
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith('/api/plan-suggestions/31/accept', expect.anything()),
+    )
+    expect(await screen.findByRole('button', { name: '버전 3 ▾' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '☔ 비 오면? · 대안 1' }))
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith('/api/itineraries/7/review', expect.anything()),
+    )
+    const call = fetch.mock.calls.find(([url]) => url === '/api/itineraries/7/review')
+    expect(JSON.parse(call?.[1]?.body as string)).toEqual({ rain_date: '2030-12-28', force: true })
   })
 })

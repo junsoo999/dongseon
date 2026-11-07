@@ -90,6 +90,8 @@ class Edit:
         excluded: Pins the user took out; a re-solve leaves them out too.
         resolve: Re-solve the unlocked pins (True) or time the layout exactly as given (False).
         base_dropped: Reasons from the version being edited, for pins still left out.
+        pinned: Extra pins a re-solve keeps in place without marking them locked (AI suggestion checks).
+        held_out: Extra pins a re-solve leaves out without marking them removed (AI suggestion checks).
     """
 
     layout: dict[date, list[int]]
@@ -97,6 +99,24 @@ class Edit:
     excluded: frozenset[int] = frozenset()
     resolve: bool = False
     base_dropped: dict[int, str] = field(default_factory=dict)
+    pinned: frozenset[int] = frozenset()
+    held_out: frozenset[int] = frozenset()
+
+
+def edit_of(it: Itinerary, *, resolve: bool = False) -> Edit:
+    """The layout, locks and exclusions of a stored version."""
+    stats = json.loads(it.solver_stats_json or "{}")
+    layout: dict[date, list[int]] = {date.fromisoformat(d): [] for d in stats.get("days") or {}}
+    for item in sorted(it.items, key=lambda x: (x.day, x.seq)):
+        if item.pin_id:
+            layout.setdefault(item.day, []).append(item.pin_id)
+    return Edit(
+        layout=layout,
+        locked=frozenset(i.pin_id for i in it.items if i.locked and i.pin_id),
+        excluded=frozenset(stats.get("excluded") or []),
+        resolve=resolve,
+        base_dropped={x["pin_id"]: x["reason"] for x in stats.get("dropped") or []},
+    )
 
 
 @dataclass
@@ -293,11 +313,12 @@ def _solve_layout(
     ctx: PlanContext, edit: Edit | None, time_limit_s: int
 ) -> tuple[dict[int, list[int]], dict[int, str], str]:
     """Solve for an order per day, keeping locked pins on their date and in their order."""
-    excluded = edit.excluded if edit else frozenset()
+    excluded = (edit.excluded | edit.held_out) if edit else frozenset()
     locks: dict[int, tuple[int, int]] = {}
     if edit:
+        keep = edit.locked | edit.pinned
         for i, pin_ids in _check_layout(ctx, edit.layout).items():
-            for order, pid in enumerate(p for p in pin_ids if p in edit.locked):
+            for order, pid in enumerate(p for p in pin_ids if p in keep):
                 locks[pid] = (i, order)
     stops: list[Stop] = []
     for pid, stop in ctx.stops.items():
@@ -345,19 +366,35 @@ def _store(
     excluded: frozenset[int],
     dropped: dict[int, str],
     status: str = "ok",
+    persist: bool = True,
 ) -> Itinerary:
-    """Time, validate and save a layout as the new active version (older versions become archived)."""
+    """Time, validate and save a layout as the new active version (older versions become archived).
+
+    With ``persist=False`` nothing is written: the result is a transient preview (id 0, negative item ids).
+    """
     trip = ctx.trip
-    for old in session.scalars(select(Itinerary).where(Itinerary.trip_id == trip.id, Itinerary.status == "active")):
-        old.status = "archived"
     version = (
         session.scalar(
             select(Itinerary.version).where(Itinerary.trip_id == trip.id).order_by(Itinerary.version.desc())
         )
         or 0
     ) + 1
-    itinerary = Itinerary(trip_id=trip.id, version=version, origin=origin, created_at=datetime.now(UTC))
-    session.add(itinerary)
+    if persist:
+        for old in session.scalars(
+            select(Itinerary).where(Itinerary.trip_id == trip.id, Itinerary.status == "active")
+        ):
+            old.status = "archived"
+    itinerary = Itinerary(
+        trip_id=trip.id,
+        version=version,
+        origin=origin,
+        status="active" if persist else "preview",
+        created_at=datetime.now(UTC),
+    )
+    if persist:
+        session.add(itinerary)
+    else:
+        itinerary.id = 0
 
     def at(abs_min: int) -> datetime:
         local = datetime.combine(ctx.dates[0], time(0), ctx.tz) + timedelta(minutes=abs_min)
@@ -457,8 +494,52 @@ def _store(
         },
         ensure_ascii=False,
     )
-    session.flush()
+    if persist:
+        session.flush()
+    else:
+        for n, item in enumerate(itinerary.items, start=1):
+            item.id = -n
     return itinerary
+
+
+def make_version(
+    session: Session,
+    ctx: PlanContext,
+    edit: Edit | None,
+    *,
+    origin: str | None = None,
+    time_limit_s: int = 3,
+    persist: bool = True,
+) -> Itinerary:
+    """Solve or time a layout in a prepared context and store it (or return a transient preview).
+
+    Args:
+        session: DB session; the caller commits.
+        ctx: The trip's prepared context (see :func:`prepare`).
+        edit: ``None`` for a fresh solve; otherwise a layout, re-solved around locked pins or timed as is.
+        origin: Stored origin; defaults to "solver" for solves and "user" for layouts timed as given.
+        time_limit_s: Solver time limit.
+        persist: Save as the new active version (True) or only build a preview (False).
+    """
+    if edit is None or edit.resolve:
+        layout, dropped, status = _solve_layout(ctx, edit, time_limit_s)
+        if edit:
+            dropped = {**edit.base_dropped, **dropped}
+        origin = origin or "solver"
+    else:
+        layout, dropped, status = _check_layout(ctx, edit.layout), edit.base_dropped, "ok"
+        origin = origin or "user"
+    return _store(
+        session,
+        ctx,
+        layout,
+        origin=origin,
+        locked=edit.locked if edit else frozenset(),
+        excluded=edit.excluded if edit else frozenset(),
+        dropped=dropped,
+        status=status,
+        persist=persist,
+    )
 
 
 def build_itinerary(
@@ -487,19 +568,4 @@ def build_itinerary(
         time_limit_s: Solver time limit.
     """
     ctx = prepare(session, trip=trip, city=city, profile=profile, settings=settings, http=http, client=client)
-    if edit is None or edit.resolve:
-        layout, dropped, status = _solve_layout(ctx, edit, time_limit_s)
-        origin = "solver"
-    else:
-        layout, dropped, status = _check_layout(ctx, edit.layout), edit.base_dropped, "ok"
-        origin = "user"
-    return _store(
-        session,
-        ctx,
-        layout,
-        origin=origin,
-        locked=edit.locked if edit else frozenset(),
-        excluded=edit.excluded if edit else frozenset(),
-        dropped=dropped,
-        status=status,
-    )
+    return make_version(session, ctx, edit, time_limit_s=time_limit_s)

@@ -436,8 +436,10 @@ uv run --no-sync dongseon serve
 | POST | `/api/trips/{id}/parse-booking` | 예약 메일 파싱 (AI) |
 | POST | `/api/trips/{id}/itineraries/solve` | 초안 생성 (잠금 반영) |
 | GET/PATCH | `/api/itineraries/{id}` | 일정 조회와 편집 |
-| POST | `/api/itineraries/{id}/review` | AI 검토 제안 생성 |
-| POST | `/api/suggestions/{id}/accept`, `/api/suggestions/{id}/reject` | 제안 처리 (재solve와 검증 포함) |
+| POST | `/api/itineraries/{id}/review` | AI 검토(또는 `rain_date`의 비 오는 날 대안) 백그라운드 시작 |
+| GET | `/api/trips/{id}/plan-suggestions`, `/api/plan-suggestions/{id}/preview` | AI 일정 제안 목록, 지금 버전에 적용한 미리보기 (저장 안 함) |
+| POST | `/api/plan-suggestions/{id}/accept`, `/api/plan-suggestions/{id}/reject` | 일정 제안 처리 (재검증 후 새 버전) |
+| POST | `/api/suggestions/{id}/accept`, `/api/suggestions/{id}/reject` | 장소·숙소 추천 처리 |
 | GET | `/api/itineraries/{id}/export.ics`, `/api/itineraries/{id}/print` | 내보내기 |
 | GET | `/api/trips/{id}/today` | 오늘 화면 |
 | GET | `/api/usage`, `/api/settings/status` | 사용량, 키 설정 여부 |
@@ -459,7 +461,7 @@ uv run --no-sync dongseon serve
 | M2.5 | 자동 후보 찾기 (2026-11-05 사용자 요청으로 추가): claude_cli 이식, 가볼 곳·맛집 AI 추천(`places_research`), 상위 동네 호텔 AI 추천(`stay_research`), 수락·거절 흐름, 항공권·에어비앤비·부킹닷컴 검색 링크, `scout` 잡. 항공·호텔 자동 가격 수집은 `docs/travel-data-sources.md` 검토 후 결정 | 버튼 한 번으로 출처가 붙은 추천이 쌓이고, 수락하면 핀·숙소 후보가 됨 |
 | M2.6 | 실시간 가격 (2026-11-05 사용자 요청): Ignav 왕복 운임(인천 출발 직항, 1시간당 비용 순 추천), 楽天トラベル 빈방(상위 동네 역 반경 1km), 날짜별 최저가 기록, 후보로 추가, `prices`·`daily` 잡과 launchd `com.dongseon.daily` | 매일 아침 운임·빈방이 갱신되고 화면에서 바로 후보로 넣을 수 있음 |
 | M3 | (M3a: 영업시간·연휴, OR-Tools solver(날짜별 복사본 + 하루 분량 균형), 경고, 버전 저장, 타임라인·날짜별 지도·길찾기 / M3b: 편집(순서·날짜 옮기기·빼기·넣기, 옮긴 곳 자동 잠금)·잠금 유지 다시 맞추기·버전 비교와 되돌리기·영업시간 직접 입력. Google 도보 확인은 서버 키의 Routes API 권한이 생기면 붙임) 일정: 날짜별 영업 시간창, OR-Tools solver, validator, 타임라인·날짜별 지도, 드래그·잠금·다시 맞추기, 버전, Google Maps 딥링크 | 5일 일정 초안이 경고와 함께 나오고 편집 후 다시 맞추기가 동작 |
-| M4 | AI: plan_review, rain_plan, hours_research, stay_area_notes, booking_parse (claude_cli·맛집 조사·수락 흐름은 M2.5에서 먼저 함) | AI 제안이 재solve와 검증을 거쳐 diff로 보이고 수락하면 새 버전이 생김 |
+| M4 | (M4a: AI 일정 검토·비 오는 날 대안 — 제안마다 그대로 시각 계산 후 경고가 늘면 바뀌는 날만 다시 맞춤, 미리보기 diff, 수락 시 새 버전. 비 오는 날은 날짜별 버튼으로 시작하고 M5에서 예보와 연결 / M4b: hours_research, stay_area_notes, booking_parse) AI: plan_review, rain_plan, hours_research, stay_area_notes, booking_parse (claude_cli·맛집 조사·수락 흐름은 M2.5에서 먼저 함) | AI 제안이 재solve와 검증을 거쳐 diff로 보이고 수락하면 새 버전이 생김 |
 | M5 | 여행 모드: 오늘 화면, 날씨·환율, D-7 영업시간 갱신, `daily`와 launchd, `serve` 상시 실행, 원격 접속, PWA 오프라인, ICS·인쇄 내보내기, 체크리스트 | 휴대폰 데이터망으로 원격 도메인에서 오늘 일정과 길찾기가 열리고, 비행기 모드에서도 일정을 읽을 수 있음 |
 | M6 | (선택) Google Takeout "저장됨" 가져오기(2026-11-05 사용자 요청으로 M1에서 이동), 여행 중 지출 기록, 여행 후 회고(실제 방문 체크, 체류시간 보정), 항공·숙소 가격 adapter, 다른 도시 config | 사용자와 범위를 합의한 뒤 |
 

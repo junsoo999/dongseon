@@ -102,8 +102,16 @@ alwaysApply: true
   No Anthropic API key. Tools are off except for research tasks (`WebSearch`, `WebFetch`).
 - Prompts live in `dongseon/llm/prompts/<name>_v<N>.md`; the file name is the version. Outputs use fixed JSON schemas
   validated with pydantic. Cache by input snapshot hash + prompt version; respect `LLM_DAILY_TOKEN_LIMIT`.
-- The LLM proposes edits (`move` / `swap` / `drop` / `add_from_pool` / `set_dwell`) and never sets times. Every
-  suggestion is re-solved and validated before it is shown as applicable, and becomes a new version only when accepted.
+- The LLM proposes edits (`move` / `swap` / `drop` / `add_from_pool` / `set_dwell`) and never sets times.
+  `dongseon/planner/suggest.py` applies each edit to the version, times it as given and, if that adds problems,
+  re-solves only the touched days (`Edit.pinned` / `Edit.held_out` keep the rest without marking locks). An edit is
+  "적용 가능" only with no new warnings and no newly dropped must/want pins versus the same version timed today.
+  Previews are transient versions (`make_version(persist=False)`); preview and accept re-check against the active
+  version, and accepting saves a new version with origin "ai".
+- Plan review and rain plans (`dongseon/llm/plan_review.py`, `dongseon review [--rain DATE]`, job lock `review`)
+  store `ai_suggestions` rows of kind `plan_review` (day titles, notes) and `plan_edit`; a new run expires pending
+  rows of the same scope, and rejected edit titles are sent back as `rejected`. Indoor categories for rain plans
+  live in `config/defaults.yaml` (`categories.indoor`).
 - Research results without a source URL are dropped. Everything AI-generated carries "AI 제안".
 - Scouting (`dongseon/llm/research.py`, `dongseon scout`): suggestions are matched to place IDs with IDs Only search,
   matches farther than 40 km from the city center are dropped, and the same input is not researched again within 7 days.
