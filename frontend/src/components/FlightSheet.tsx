@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { FlightIn, FlightOut, LegIn, TripOut } from '../api/client'
+import type { FlightDraft, FlightIn, FlightOut, LegIn, TripOut } from '../api/client'
 import { useAirports, useDeleteFlight, useSaveFlight } from '../api/hooks'
 import { CURRENCIES, parseAmount } from '../lib/stays'
 import { BottomSheet } from './BottomSheet'
@@ -47,28 +47,50 @@ function fromFlight(f: FlightOut): LegDraft[] {
   }))
 }
 
+function fromDraft(d: FlightDraft): LegDraft[] {
+  return d.legs.map((l) => ({
+    direction: l.direction,
+    flight_no: l.flight_no ?? '',
+    dep_airport: l.dep_airport,
+    dep_local: l.dep_local.slice(0, 16),
+    arr_airport: l.arr_airport,
+    arr_local: l.arr_local.slice(0, 16),
+  }))
+}
+
+/** Add or edit a flight; ``draft`` pre-fills a new booked flight from a pasted booking email. */
 export function FlightSheet({
   trip,
   flight,
+  draft,
   onClose,
 }: {
   trip: TripOut
   flight: FlightOut | null
+  draft?: FlightDraft
   onClose: () => void
 }) {
   const airports = useAirports()
   const save = useSaveFlight(trip.id)
   const remove = useDeleteFlight(trip.id)
-  const [label, setLabel] = useState(flight?.label ?? '')
+  const [label, setLabel] = useState(flight?.label ?? draft?.label ?? '')
   const [amount, setAmount] = useState(
-    flight?.total_amount != null ? String(flight.total_amount) : '',
+    flight?.total_amount != null
+      ? String(flight.total_amount)
+      : draft?.total_amount != null
+        ? String(draft.total_amount)
+        : '',
   )
-  const [currency, setCurrency] = useState(flight?.currency ?? 'KRW')
-  const [baggage, setBaggage] = useState(flight?.baggage_note ?? '')
+  const [currency, setCurrency] = useState(flight?.currency ?? draft?.currency ?? 'KRW')
+  const [baggage, setBaggage] = useState(flight?.baggage_note ?? draft?.baggage_note ?? '')
   const [url, setUrl] = useState(flight?.booking_url ?? '')
-  const [booked, setBooked] = useState(flight?.status === 'booked')
+  const [booked, setBooked] = useState(flight ? flight.status === 'booked' : !!draft)
   const [legs, setLegs] = useState<LegDraft[]>(() =>
-    flight ? fromFlight(flight) : [blankLeg('out', trip), blankLeg('back', trip)],
+    flight
+      ? fromFlight(flight)
+      : draft
+        ? fromDraft(draft)
+        : [blankLeg('out', trip), blankLeg('back', trip)],
   )
   const amountValue = parseAmount(amount)
   const amountInvalid = amount.trim() !== '' && amountValue === null

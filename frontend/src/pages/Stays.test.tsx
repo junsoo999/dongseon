@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mockApi } from '../test/mockApi'
@@ -117,5 +117,44 @@ describe('Stays', () => {
     expect(screen.getByText(/스카이라이너/)).toBeInTheDocument()
     expect(screen.getByText(/1 JPY = 8.4587 KRW .*2026-11-04 기준/)).toBeInTheDocument()
     expect(screen.getByText('지도 후보 2곳')).toBeInTheDocument()
+  })
+
+  it('shows AI area notes under the ranked area', async () => {
+    mockApi([
+      [
+        '/area-notes',
+        [
+          {
+            id: 1,
+            area: '긴자',
+            summary: '밤에는 조용합니다',
+            pros: ['백화점이 많음'],
+            cons: ['숙소가 비쌈'],
+            sources: [{ title: '가이드', url: 'https://example.com/ginza' }],
+            created_at: '2026-11-07T00:00:00Z',
+          },
+        ],
+      ],
+      ['/stays/score', score],
+      ['/stays', stays],
+      ['/pins', []],
+      ['/api/trips', [trip]],
+    ])
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <Stays />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: /밤에는 조용합니다/ }))
+    expect(screen.getByText('👍 백화점이 많음')).toBeInTheDocument()
+    expect(screen.getByText('👎 숙소가 비쌈')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '가이드' })).toHaveAttribute(
+      'href',
+      'https://example.com/ginza',
+    )
+    expect(screen.getByText(/1개 동네에 분위기·장단점 메모가 있습니다/)).toBeInTheDocument()
   })
 })

@@ -37,6 +37,7 @@ class ItemOut(BaseModel):
     move_mode: str | None
     hours: str | None
     hours_source: str | None  # user | google_special | ai_research | google_regular | none
+    hours_url: str | None = None  # the cited page for AI-researched hours
     locked: bool
     warnings: list[str]
 
@@ -124,6 +125,7 @@ def itinerary_out(it: Itinerary, trip: Trip, session: SessionDep) -> ItineraryOu
                     move_mode=item.move_mode,
                     hours=extra.get("hours"),
                     hours_source=extra.get("hours_source"),
+                    hours_url=extra.get("hours_url"),
                     locked=item.locked,
                     warnings=extra.get("warnings") or [],
                 )

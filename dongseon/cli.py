@@ -25,6 +25,8 @@ from dongseon.places.service import resolve_pending
 from dongseon.sources.google_places import GooglePlacesClient, PlacesError
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from sqlalchemy import Engine
 
 app = typer.Typer(help="dongseon 명령줄 도구", no_args_is_help=True)
@@ -405,6 +407,77 @@ def review(
     _log_job(engine, "review", status, rows, error)
     if status != "ok":
         raise typer.Exit(EXIT_SYSTEM_ERROR)
+
+
+def _research_job(job: str, trip: int | None, run: "Callable[..., str]") -> None:
+    """Run one AI research step for each unfinished trip (or one trip) under a job lock and log it."""
+    from dongseon.core.profile import load_profile
+    from dongseon.llm.claude_cli import ClaudeCli, LlmError
+
+    settings = get_settings()
+    upgrade_schema(settings.database_file)
+    engine = get_engine(settings.database_file)
+    profile_path = (
+        settings.profile_file if settings.profile_file.exists() else REPO_ROOT / "config/profile.example.yaml"
+    )
+    profile = load_profile(profile_path)
+    llm = ClaudeCli(engine, model=settings.llm_model, daily_token_limit=settings.llm_daily_token_limit)
+    status, error = "ok", None
+    try:
+        with job_lock(settings.lock_path, job):
+            with session_scope(engine) as session:
+                stmt = select(Trip.id).where(Trip.end_date >= datetime.now(UTC).date())
+                ids = list(session.scalars(stmt if trip is None else select(Trip.id).where(Trip.id == trip)))
+            if not ids:
+                typer.echo("대상 여행이 없습니다")
+            for t_id in ids:
+                try:
+                    with session_scope(engine) as session:
+                        t = session.get(Trip, t_id)
+                        assert t is not None
+                        city = load_city(settings.cities_path, t.city_key)
+                        typer.echo(f"#{t_id} {run(session, llm, t, city, profile)}")
+                except LlmError as e:
+                    status, error = "error", str(e)[:300]
+                    typer.echo(f"#{t_id} 실패: {e}", err=True)
+    except JobLockedError as e:
+        raise _fail("이미 실행 중입니다", EXIT_LOCKED) from e
+    _log_job(engine, job, status, 0, error)
+    if status != "ok":
+        raise typer.Exit(EXIT_SYSTEM_ERROR)
+
+
+@app.command(
+    name="hours-research",
+    help="연휴 기간에 걸린 꼭·가고 싶은 곳의 그날 영업 여부를 AI가 웹에서 조사합니다 (출처 포함).",
+)
+def hours_research(
+    trip: Annotated[int | None, typer.Option("--trip", help="이 여행만 (기본: 끝나지 않은 모든 여행)")] = None,
+    force: Annotated[bool, typer.Option("--force", help="최근에 조사한 곳도 다시 조사")] = False,
+) -> None:
+    """Research holiday-date opening hours with headless Claude Code."""
+    from dongseon.llm.hours_research import run_hours_research
+
+    def run(session, llm, t, city, _profile) -> str:
+        r = run_hours_research(session, llm, t, city, force=force)
+        return f"{r.pins}곳 조사, 날짜 {r.stored}건 저장 (최근 조사라 건너뜀 {r.skipped}곳)"
+
+    _research_job("hours-research", trip, run)
+
+
+@app.command(name="area-notes", help="숙소 후보 동네마다 분위기·장단점을 AI가 웹에서 조사합니다 (출처 포함).")
+def area_notes(
+    trip: Annotated[int | None, typer.Option("--trip", help="이 여행만 (기본: 끝나지 않은 모든 여행)")] = None,
+    force: Annotated[bool, typer.Option("--force", help="입력이 같아도 다시 조사")] = False,
+) -> None:
+    """Research stay-area notes with headless Claude Code."""
+    from dongseon.llm.area_notes import run_area_notes
+
+    def run(session, llm, t, city, profile) -> str:
+        r = run_area_notes(session, llm, t, city, profile, force=force)
+        return "최근에 같은 조건으로 조사해서 건너뜀 (--force로 다시)" if r.skipped else f"동네 메모 {r.stored}곳"
+
+    _research_job("area-notes", trip, run)
 
 
 @app.command(help="실시간 가격을 가져옵니다: Ignav 항공 운임과 楽天トラベル 빈방 (끝나지 않은 여행).")

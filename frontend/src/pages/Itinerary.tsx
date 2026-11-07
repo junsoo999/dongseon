@@ -12,6 +12,7 @@ import {
   useSolveItinerary,
 } from '../api/hooks'
 import { DayMap } from '../components/DayMap'
+import { HolidayHours } from '../components/HolidayHours'
 import { HoursSheet } from '../components/HoursSheet'
 import { LoadingBlock } from '../components/Loading'
 import { MapLayout, Page } from '../components/MapLayout'
@@ -134,7 +135,25 @@ function VisitRow({ item, n, onHours }: { item: ItemOut; n: number; onHours: () 
           )}
         </p>
         <p className="flex items-center justify-between gap-2 text-xs text-gray-500">
-          <span>🕘 {item.hours ?? '영업시간 정보 없음'}</span>
+          <span className="min-w-0">
+            🕘 {item.hours ?? '영업시간 정보 없음'}
+            {item.hours_source === 'ai_research' && (
+              <>
+                {' '}
+                <span className="text-violet-700">확인 필요</span>
+                {item.hours_url && (
+                  <a
+                    href={item.hours_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="ml-1 text-violet-700 underline"
+                  >
+                    출처↗
+                  </a>
+                )}
+              </>
+            )}
+          </span>
           {item.pin_id !== null && (
             <button
               type="button"
@@ -485,6 +504,7 @@ export function Itinerary() {
         </div>
       )}
       {it && !draft && !busy && <PlanReviewPanel tripId={trip.id} it={it} />}
+      {!draft && !busy && <HolidayHours tripId={trip.id} />}
 
       {it && draft && (
         <div className="sticky top-0 z-10 space-y-2 rounded-2xl border border-teal-300 bg-teal-50 p-3">

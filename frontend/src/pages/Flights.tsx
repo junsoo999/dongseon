@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import type { FlightOut } from '../api/client'
+import type { FlightDraft, FlightOut } from '../api/client'
 import { useFlights } from '../api/hooks'
+import { BookingPasteSheet } from '../components/BookingPaste'
 import { FlightSheet } from '../components/FlightSheet'
 import { LegLine } from '../components/LegLine'
 import { carrierCode } from '../lib/airlines'
@@ -186,7 +187,8 @@ function FlightCard({ f, best, onEdit }: { f: FlightOut; best: boolean; onEdit: 
 export function Flights() {
   const { trip, trips } = useCurrentTrip()
   const flights = useFlights(trip?.id ?? null)
-  const [sheet, setSheet] = useState<{ flight: FlightOut | null } | null>(null)
+  const [sheet, setSheet] = useState<{ flight: FlightOut | null; draft?: FlightDraft } | null>(null)
+  const [pasting, setPasting] = useState(false)
 
   if (trips.isPending) return <p className="text-gray-500">불러오는 중…</p>
   if (!trip) {
@@ -227,6 +229,9 @@ export function Flights() {
         </button>
       </div>
 
+      <button type="button" onClick={() => setPasting(true)} className={`${BTN.soft} w-full`}>
+        📋 예약 메일로 입력
+      </button>
       <LiveFares tripId={trip.id} />
       <FlightSearchLinks tripId={trip.id} />
       {flights.isError && <p className="text-sm text-red-700">{flights.error.message}</p>}
@@ -261,7 +266,24 @@ export function Flights() {
         ))}
       </div>
 
-      {sheet && <FlightSheet trip={trip} flight={sheet.flight} onClose={() => setSheet(null)} />}
+      {sheet && (
+        <FlightSheet
+          trip={trip}
+          flight={sheet.flight}
+          draft={sheet.draft}
+          onClose={() => setSheet(null)}
+        />
+      )}
+      {pasting && (
+        <BookingPasteSheet
+          tripId={trip.id}
+          onClose={() => setPasting(false)}
+          onResult={(r) => {
+            setPasting(false)
+            if (r.flight) setSheet({ flight: null, draft: r.flight })
+          }}
+        />
+      )}
     </Page>
   )
 }

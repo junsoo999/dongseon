@@ -844,6 +844,66 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/trips/{trip_id}/hours-research': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Hours Research
+     * @description Holiday dates and the stored AI research rows for the trip's must/want pins.
+     */
+    get: operations['hours_research_api_trips__trip_id__hours_research_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/area-notes': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Area Notes
+     * @description The latest AI note per stay area.
+     */
+    get: operations['area_notes_api_trips__trip_id__area_notes_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/parse-booking': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Parse Booking Mail
+     * @description Mask the pasted text, read it with Claude (no tools) and return a draft; nothing is saved.
+     */
+    post: operations['parse_booking_mail_api_trips__trip_id__parse_booking_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/jobs/{name}': {
     parameters: {
       query?: never
@@ -947,6 +1007,29 @@ export interface components {
       links: components['schemas']['LinkOut'][]
     }
     /**
+     * AreaNoteOut
+     * @description An AI note on a stay area ("AI 제안").
+     */
+    AreaNoteOut: {
+      /** Id */
+      id: number
+      /** Area */
+      area: string
+      /** Summary */
+      summary: string
+      /** Pros */
+      pros: string[]
+      /** Cons */
+      cons: string[]
+      /** Sources */
+      sources: components['schemas']['Source'][]
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+    }
+    /**
      * AreaVacanciesOut
      * @description Vacancies around one area's main station.
      */
@@ -969,6 +1052,30 @@ export interface components {
       main_text: string
       /** Secondary Text */
       secondary_text: string
+    }
+    /**
+     * BookingIn
+     * @description A pasted booking confirmation (never stored).
+     */
+    BookingIn: {
+      /** Text */
+      text: string
+    }
+    /**
+     * BookingOut
+     * @description A draft to confirm in the flight or stay form ("AI 제안").
+     */
+    BookingOut: {
+      /** Kind */
+      kind: string
+      flight: components['schemas']['FlightDraft'] | null
+      stay: components['schemas']['StayDraft'] | null
+      /** Note */
+      note: string | null
+      /** Masked */
+      masked: {
+        [key: string]: number
+      }
     }
     /**
      * CategoryOut
@@ -1265,6 +1372,25 @@ export interface components {
       items: components['schemas']['FareOut'][]
     }
     /**
+     * FlightDraft
+     * @description A booked round trip.
+     */
+    FlightDraft: {
+      /** Label */
+      label: string
+      /** Total Amount */
+      total_amount?: number | null
+      /**
+       * Currency
+       * @default KRW
+       */
+      currency: string
+      /** Baggage Note */
+      baggage_note?: string | null
+      /** Legs */
+      legs: components['schemas']['LegDraft'][]
+    }
+    /**
      * FlightIn
      * @description A round-trip option.
      */
@@ -1438,6 +1564,18 @@ export interface components {
       source: string
     }
     /**
+     * HoursResearchOut
+     * @description Holiday dates of the trip and what research found for each target pin.
+     */
+    HoursResearchOut: {
+      /** Dates */
+      dates: string[]
+      /** Holiday Note */
+      holiday_note: string | null
+      /** Places */
+      places: components['schemas']['ResearchedPlace'][]
+    }
+    /**
      * ItemOut
      * @description A planned visit. Times are estimates; ``hours`` names the opening-hours source.
      */
@@ -1472,6 +1610,8 @@ export interface components {
       hours: string | null
       /** Hours Source */
       hours_source: string | null
+      /** Hours Url */
+      hours_url?: string | null
       /** Locked */
       locked: boolean
       /** Warnings */
@@ -1519,6 +1659,35 @@ export interface components {
       last_rows: number | null
       /** Last Error */
       last_error: string | null
+    }
+    /**
+     * LegDraft
+     * @description A flight leg as written in the mail (local times).
+     */
+    LegDraft: {
+      /**
+       * Direction
+       * @enum {string}
+       */
+      direction: 'out' | 'back'
+      /** Carrier */
+      carrier?: string | null
+      /** Flight No */
+      flight_no?: string | null
+      /** Dep Airport */
+      dep_airport: string
+      /**
+       * Dep Local
+       * Format: date-time
+       */
+      dep_local: string
+      /** Arr Airport */
+      arr_airport: string
+      /**
+       * Arr Local
+       * Format: date-time
+       */
+      arr_local: string
     }
     /**
      * LegIn
@@ -1831,6 +2000,44 @@ export interface components {
       resolved: boolean
     }
     /**
+     * ResearchedDay
+     * @description One date's AI-researched hours ("AI 조사, 출처, 확인 필요").
+     */
+    ResearchedDay: {
+      /**
+       * Date
+       * Format: date
+       */
+      date: string
+      /** Status */
+      status: string
+      /** Open */
+      open: string | null
+      /** Close */
+      close: string | null
+      /** Source Url */
+      source_url: string | null
+      /**
+       * Checked At
+       * Format: date-time
+       */
+      checked_at: string
+    }
+    /**
+     * ResearchedPlace
+     * @description A must/want pin with dates in a holiday period.
+     */
+    ResearchedPlace: {
+      /** Pin Id */
+      pin_id: number
+      /** Label */
+      label: string
+      /** Priority */
+      priority: string
+      /** Days */
+      days: components['schemas']['ResearchedDay'][]
+    }
+    /**
      * ResolveUrlIn
      * @description A pasted Google Maps URL.
      */
@@ -1927,6 +2134,27 @@ export interface components {
       title: string
       /** Url */
       url: string
+    }
+    /**
+     * StayDraft
+     * @description A booked stay; the user still picks its location.
+     */
+    StayDraft: {
+      /** Name */
+      name: string
+      /** Search Query */
+      search_query?: string | null
+      /** Check In */
+      check_in?: string | null
+      /** Check Out */
+      check_out?: string | null
+      /** Total Amount */
+      total_amount?: number | null
+      /**
+       * Currency
+       * @default JPY
+       */
+      currency: string
     }
     /**
      * StayIn
@@ -3783,12 +4011,109 @@ export interface operations {
       }
     }
   }
+  hours_research_api_trips__trip_id__hours_research_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HoursResearchOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  area_notes_api_trips__trip_id__area_notes_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AreaNoteOut'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  parse_booking_mail_api_trips__trip_id__parse_booking_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BookingIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['BookingOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   job_status_api_jobs__name__get: {
     parameters: {
       query?: never
       header?: never
       path: {
-        name: 'places-resolve' | 'scout' | 'prices' | 'review'
+        name: 'places-resolve' | 'scout' | 'prices' | 'review' | 'hours-research' | 'area-notes'
       }
       cookie?: never
     }
@@ -3819,7 +4144,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        name: 'places-resolve' | 'scout' | 'prices' | 'review'
+        name: 'places-resolve' | 'scout' | 'prices' | 'review' | 'hours-research' | 'area-notes'
       }
       cookie?: never
     }
