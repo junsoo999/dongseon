@@ -94,7 +94,7 @@ dongseon은 `127.0.0.1:8100`에서만 받습니다. 바깥에서 들어오는 �
 | `make gen-types` | OpenAPI → `frontend/src/api/schema.d.ts` |
 | `make db-upgrade` | DB 마이그레이션 적용 |
 | `make usage` | 이번 달 Google SKU별 사용량과 무료 한도 |
-| `make prices` / `make scout` / `make daily` | 실시간 가격 / AI 추천 / 둘 다 (매일 자동은 `make launchd-install JOB=daily`) |
+| `make prices` / `make scout` / `make daily` | 실시간 가격 / AI 추천 / 매일 작업 전체 (가격, 추천, 날씨, 출발 전 영업시간 재검사·비 오는 날 대안; 매일 자동은 `make launchd-install JOB=daily`) |
 | `make serve` | 프론트엔드를 빌드해 API와 한 포트로 실행 |
 | `make launchd-install` / `launchd-status` / `launchd-uninstall` | 상시 실행 관리 (`JOB=serve\|daily`) |
 | `make app-restart` | 상시 앱 재빌드 + 재시작 |
@@ -115,9 +115,9 @@ dongseon은 `127.0.0.1:8100`에서만 받습니다. 바깥에서 들어오는 �
 | M2 | 숙소 동네 점수, 숙소·항공 후보 비교 | 완료 |
 | M2.5 | AI 자동 후보 찾기(가볼 곳·맛집·호텔), 항공·숙소 검색 링크 | 검토 중 |
 | M2.6 | 실시간 가격: Ignav 항공 운임, 楽天トラベル 빈방, 매일 자동 갱신 | 검토 중 |
-| M3 | 일정 solver, validator, 편집·다시 맞추기 | |
-| M4 | AI 검토·조사·예약 메일 파싱 | |
-| M5 | 오늘 화면, daily, 원격 접속, 오프라인, 내보내기 | |
+| M3 | 일정 solver, validator, 편집·다시 맞추기 | 완료 |
+| M4 | AI 검토·조사·예약 메일 파싱 | 완료 |
+| M5 | 오늘 화면, 날씨, D-7 영업시간 재검사, 오프라인, 내보내기 | M5a 검토 중 |
 
 ## 📄 라이선스
 

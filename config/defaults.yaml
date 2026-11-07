@@ -52,3 +52,13 @@ categories:
     other: 60
   # Categories treated as indoor for rain plans (experience mixes zoos and aquariums, so it is not listed).
   indoor: [food, cafe, bar, museum, shopping]
+
+trip_mode:
+  # daily refreshes opening hours, weather and rain plans from this many days before the trip until it ends.
+  window_days: 14
+  # Google special hours (currentOpeningHours) cover today + 6 days, so re-checks start 7 days out.
+  hours_refresh_days: 7
+  # A forecast precipitation probability at or above this marks a rainy day (our choice, not a weather standard).
+  rain_probability_pct: 60
+  # Past years averaged for dates beyond Open-Meteo's 16-day forecast.
+  climate_years: 5

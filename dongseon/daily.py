@@ -1,8 +1,8 @@
 """The daily job: run each step as its own CLI process and keep going on failure.
 
-Steps: live prices (Ignav fares, Rakuten vacancies) for upcoming trips, then AI scouting (headless Claude Code;
-skipped when the input did not change within 7 days). The trip-window rules in docs/PLAN.md section 16
-(hours, weather, matrices from D-14) join in M5.
+Steps: live prices for upcoming trips, AI scouting (skipped when the input did not change within 7 days), weather,
+then the trip-window steps (docs/PLAN.md section 16). Those steps check the window themselves: Google hours re-checks
+from D-7, holiday hours research and rain plans from D-14 until the trip ends; outside it they do nothing.
 """
 
 import subprocess
@@ -17,6 +17,10 @@ from dongseon.core.config import REPO_ROOT
 STEPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("실시간 가격 (Ignav, 楽天トラベル)", ("prices",)),
     ("AI 추천 (Claude Code)", ("scout",)),
+    ("날씨 (Open-Meteo)", ("weather",)),
+    ("영업시간 다시 검사 (Google, D-7부터)", ("hours-refresh",)),
+    ("연휴 영업시간 AI 재조사 (D-14부터)", ("hours-research", "--window")),
+    ("비 오는 날 대안 (비 예보 날짜)", ("rain-plans",)),
 )
 
 # Exit codes from dongseon.cli: 0 ok, 1 user error, 2 external/system error (incl. quota stops), 3 locked.

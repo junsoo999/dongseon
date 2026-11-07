@@ -14,7 +14,7 @@ from dongseon.api.routes.trips import get_trip_or_404
 from dongseon.core.cities import load_city
 from dongseon.db.models import Itinerary, Trip, TripPin
 from dongseon.places.service import coords_for
-from dongseon.planner.build import Edit, build_itinerary, edit_of
+from dongseon.planner.build import Edit, build_itinerary, edit_of, live_hours_label
 
 router = APIRouter(tags=["itineraries"])
 
@@ -123,7 +123,7 @@ def itinerary_out(it: Itinerary, trip: Trip, session: SessionDep) -> ItineraryOu
                     end=item.end_at.astimezone(tz).strftime("%H:%M"),
                     move_min=item.move_min,
                     move_mode=item.move_mode,
-                    hours=extra.get("hours"),
+                    hours=live_hours_label(extra.get("hours"), extra.get("hours_source"), gid, d),
                     hours_source=extra.get("hours_source"),
                     hours_url=extra.get("hours_url"),
                     locked=item.locked,

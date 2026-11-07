@@ -13,6 +13,7 @@ import {
 } from '../api/hooks'
 import { BottomSheet } from '../components/BottomSheet'
 import { CreateTripForm } from '../components/CreateTripForm'
+import { HoursAlert } from '../components/HoursAlert'
 import { formatKrw } from '../lib/format'
 import { buildTodos, countdownLabel, tripCountdown } from '../lib/home'
 import { CATEGORY_EMOJI, categoryLabel } from '../lib/places'
@@ -416,6 +417,7 @@ export function Home() {
       <Hero trip={trip} onNew={() => setCreating(true)} />
       {trip && (
         <>
+          <HoursAlert tripId={trip.id} />
           <div className="grid gap-4 md:grid-cols-3 md:gap-5">
             <SuggestionsCard tripId={trip.id} className="md:col-span-2" />
             <TodoCard trip={trip} />

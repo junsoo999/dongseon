@@ -14,6 +14,16 @@ const DEFAULTS: Array<[string, unknown]> = [
   ['/plan-suggestions', { reviews: [], edits: [] }],
   ['/hours-research', { dates: [], holiday_note: null, places: [] }],
   ['/area-notes', []],
+  ['/alerts', []],
+  [
+    '/weather',
+    {
+      days: [],
+      rain_probability_pct: 60,
+      attribution: 'Weather data by Open-Meteo.com',
+      attribution_url: 'https://open-meteo.com/',
+    },
+  ],
   ['/suggestions', []],
   ['/search-links', { flights: [], stays: [] }],
   [

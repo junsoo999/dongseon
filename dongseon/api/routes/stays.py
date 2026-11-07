@@ -127,7 +127,8 @@ class ScoreOut(BaseModel):
     origins: list[OriginOut]
 
 
-def _fx_out(rate: Rate | None) -> FxOut | None:
+def fx_out(rate: Rate | None) -> FxOut | None:
+    """Serialize a stored rate with its source label."""
     if rate is None:
         return None
     return FxOut(base=rate.base, quote=rate.quote, rate=rate.rate, date=rate.date, source=SOURCE_LABEL)
@@ -188,7 +189,7 @@ def _get_stay(session: Session, trip_id: int, stay_id: int) -> Stay:
 @router.get("/fx", response_model=FxOut | None)
 def fx(session: SessionDep, http: HttpDep, base: str = "JPY", quote: str = "KRW") -> FxOut | None:
     """Latest reference rate (fetched at most once a day)."""
-    return _fx_out(get_rate(session, http, base.upper(), quote.upper()))
+    return fx_out(get_rate(session, http, base.upper(), quote.upper()))
 
 
 @router.get("/trips/{trip_id}/stays", response_model=list[StayOut])
@@ -379,6 +380,6 @@ def build_score(
             for a in city.airports
             if a.express
         },
-        fx=[f for f in (_fx_out(r) for r in rates.values()) if f is not None and f.base != f.quote],
+        fx=[f for f in (fx_out(r) for r in rates.values()) if f is not None and f.base != f.quote],
         origins=origins,
     )

@@ -28,6 +28,12 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from sqlalchemy import Engine
+    from sqlalchemy.orm import Session
+
+    from dongseon.core.config import Settings
+    from dongseon.core.defaults import Defaults
+    from dongseon.core.profile import Profile
+    from dongseon.llm.claude_cli import ClaudeCli
 
 app = typer.Typer(help="dongseon 명령줄 도구", no_args_is_help=True)
 db_app = typer.Typer(help="데이터베이스 관리", no_args_is_help=True)
@@ -313,6 +319,62 @@ def scout(
         raise typer.Exit(EXIT_SYSTEM_ERROR)
 
 
+def _profile_for(settings: "Settings") -> "Profile":
+    from dongseon.core.profile import load_profile
+
+    path = settings.profile_file if settings.profile_file.exists() else REPO_ROOT / "config/profile.example.yaml"
+    return load_profile(path)
+
+
+def _places_client(
+    session: "Session", http: httpx.Client, settings: "Settings", defaults: "Defaults"
+) -> GooglePlacesClient | None:
+    """A metered Places client, or ``None`` without a server key."""
+    if not settings.google_maps_server_key:
+        return None
+    meter = make_meter(
+        session,
+        defaults.google_free_tier,
+        warn_ratio=settings.google_free_tier_warn_ratio,
+        stop_ratio=settings.google_free_tier_stop_ratio,
+    )
+    return GooglePlacesClient(http, settings.google_maps_server_key, meter)
+
+
+def _review_version(
+    engine: "Engine", http: httpx.Client, llm: "ClaudeCli", it_id: int, rain_date: date | None, force: bool
+) -> str:
+    """Review one version (or plan its rain day) and return a Korean summary line."""
+    from dongseon.db.models import Itinerary
+    from dongseon.llm.plan_review import run_review
+    from dongseon.planner.build import prepare
+
+    settings = get_settings()
+    defaults = load_defaults(settings.defaults_file)
+    profile = _profile_for(settings)
+    with session_scope(engine) as session:
+        it = session.get(Itinerary, it_id)
+        assert it is not None
+        trip_row = session.get(Trip, it.trip_id)
+        assert trip_row is not None
+        city = load_city(settings.cities_path, trip_row.city_key)
+        client = _places_client(session, http, settings, defaults)
+        ctx = prepare(session, trip=trip_row, city=city, profile=profile, settings=settings, http=http, client=client)
+        result = run_review(
+            session,
+            llm,
+            ctx,
+            it,
+            profile,
+            indoor=set(defaults.categories.indoor),
+            rain_date=rain_date,
+            force=force,
+        )
+    if result.skipped:
+        return "같은 입력의 제안이 이미 있어 건너뜀 (--force로 다시)"
+    return f"제안 {result.proposed}건 중 {result.stored}건 저장 (적용 가능 {result.applicable})"
+
+
 @app.command(help="AI가 일정을 검토해 편집을 제안합니다. --rain 날짜를 주면 그날 비 올 때의 대안을 제안합니다.")
 def review(
     itinerary: Annotated[
@@ -322,11 +384,8 @@ def review(
     force: Annotated[bool, typer.Option("--force", help="입력이 같아도 다시 검토")] = False,
 ) -> None:
     """Ask headless Claude Code for plan edits, check each one and store them as suggestions."""
-    from dongseon.core.profile import load_profile
     from dongseon.db.models import Itinerary
     from dongseon.llm.claude_cli import ClaudeCli, LlmError
-    from dongseon.llm.plan_review import run_review
-    from dongseon.planner.build import prepare
 
     settings = get_settings()
     try:
@@ -335,13 +394,8 @@ def review(
         raise _fail("--rain은 YYYY-MM-DD 형식입니다") from e
     upgrade_schema(settings.database_file)
     engine = get_engine(settings.database_file)
-    defaults = load_defaults(settings.defaults_file)
-    profile_path = (
-        settings.profile_file if settings.profile_file.exists() else REPO_ROOT / "config/profile.example.yaml"
-    )
-    profile = load_profile(profile_path)
     llm = ClaudeCli(engine, model=settings.llm_model, daily_token_limit=settings.llm_daily_token_limit)
-    status, error, rows = "ok", None, 0
+    status, error = "ok", None
     try:
         with job_lock(settings.lock_path, "review"), httpx.Client(timeout=15.0) as http:
             with session_scope(engine) as session:
@@ -357,60 +411,180 @@ def review(
                 typer.echo("검토할 일정이 없습니다")
             for it_id in ids:
                 try:
-                    with session_scope(engine) as session:
-                        it = session.get(Itinerary, it_id)
-                        assert it is not None
-                        trip_row = session.get(Trip, it.trip_id)
-                        assert trip_row is not None
-                        city = load_city(settings.cities_path, trip_row.city_key)
-                        client = None
-                        if settings.google_maps_server_key:
-                            meter = make_meter(
-                                session,
-                                defaults.google_free_tier,
-                                warn_ratio=settings.google_free_tier_warn_ratio,
-                                stop_ratio=settings.google_free_tier_stop_ratio,
-                            )
-                            client = GooglePlacesClient(http, settings.google_maps_server_key, meter)
-                        ctx = prepare(
-                            session,
-                            trip=trip_row,
-                            city=city,
-                            profile=profile,
-                            settings=settings,
-                            http=http,
-                            client=client,
-                        )
-                        result = run_review(
-                            session,
-                            llm,
-                            ctx,
-                            it,
-                            profile,
-                            indoor=set(defaults.categories.indoor),
-                            rain_date=rain_date,
-                            force=force,
-                        )
-                    if result.skipped:
-                        typer.echo(f"버전 #{it_id}: 같은 입력의 제안이 이미 있어 건너뜀 (--force로 다시)")
-                    else:
-                        rows += result.stored
-                        typer.echo(
-                            f"버전 #{it_id}: 제안 {result.proposed}건 중 {result.stored}건 저장 "
-                            f"(적용 가능 {result.applicable})"
-                        )
+                    typer.echo(f"버전 #{it_id}: {_review_version(engine, http, llm, it_id, rain_date, force)}")
                 except (LlmError, ValueError, FreeTierExceededError, httpx.HTTPError) as e:
                     status, error = ("quota" if isinstance(e, FreeTierExceededError) else "error"), str(e)[:300]
                     typer.echo(f"버전 #{it_id} 검토 실패: {e}", err=True)
     except JobLockedError as e:
         raise _fail("이미 실행 중입니다", EXIT_LOCKED) from e
-    _log_job(engine, "review", status, rows, error)
+    _log_job(engine, "review", status, 0, error)
     if status != "ok":
         raise typer.Exit(EXIT_SYSTEM_ERROR)
 
 
-def _research_job(job: str, trip: int | None, run: "Callable[..., str]") -> None:
-    """Run one AI research step for each unfinished trip (or one trip) under a job lock and log it."""
+def _window_trips(session: "Session", trip: int | None, days_before: int) -> list[int]:
+    """Trips (or the one asked for) whose trip window has started and not ended."""
+    from dongseon.tripmode import in_window
+
+    rows = session.scalars(select(Trip) if trip is None else select(Trip).where(Trip.id == trip))
+    return [t.id for t in rows if in_window(t, days_before)]
+
+
+@app.command(help="여행 날짜의 날씨를 가져옵니다 (Open-Meteo: 16일 이내는 예보, 그 뒤는 지난 몇 년 같은 날짜 평균).")
+def weather(
+    trip: Annotated[int | None, typer.Option("--trip", help="이 여행만 (기본: 끝나지 않은 모든 여행)")] = None,
+) -> None:
+    """Store forecasts and climate figures for unfinished trips."""
+    from dongseon.tripmode.weather import refresh_weather
+
+    settings = get_settings()
+    upgrade_schema(settings.database_file)
+    engine = get_engine(settings.database_file)
+    defaults = load_defaults(settings.defaults_file)
+    status, error, rows = "ok", None, 0
+    try:
+        with job_lock(settings.lock_path, "weather"), httpx.Client(timeout=15.0) as http:
+            with session_scope(engine) as session:
+                stmt = select(Trip.id).where(Trip.end_date >= datetime.now(UTC).date())
+                ids = list(session.scalars(stmt if trip is None else select(Trip.id).where(Trip.id == trip)))
+            if not ids:
+                typer.echo("대상 여행이 없습니다")
+            for t_id in ids:
+                try:
+                    with session_scope(engine) as session:
+                        t = session.get(Trip, t_id)
+                        assert t is not None
+                        city = load_city(settings.cities_path, t.city_key)
+                        r = refresh_weather(session, http, t, city, defaults.trip_mode)
+                    rows += r.forecast + r.climate
+                    typer.echo(f"#{t_id} 예보 {r.forecast}일, 평년 {r.climate}일 저장")
+                except httpx.HTTPError as e:
+                    status, error = "error", str(e)[:300]
+                    typer.echo(f"#{t_id} 날씨 실패: {e}", err=True)
+    except JobLockedError as e:
+        raise _fail("이미 실행 중입니다", EXIT_LOCKED) from e
+    _log_job(engine, "weather", status, rows, error)
+    if status != "ok":
+        raise typer.Exit(EXIT_SYSTEM_ERROR)
+
+
+@app.command(
+    name="hours-refresh",
+    help="출발 7일 전부터 Google 특별 영업시간으로 현재 일정을 다시 검사하고, 경고가 바뀌면 알림을 남깁니다.",
+)
+def hours_refresh(
+    trip: Annotated[int | None, typer.Option("--trip", help="이 여행만 (기본: 기간에 든 모든 여행)")] = None,
+) -> None:
+    """Re-time active versions with today's hours and record changed warnings."""
+    from dongseon.db.models import Itinerary
+    from dongseon.planner.build import prepare
+    from dongseon.tripmode.hours_refresh import refresh_hours
+
+    settings = get_settings()
+    upgrade_schema(settings.database_file)
+    engine = get_engine(settings.database_file)
+    defaults = load_defaults(settings.defaults_file)
+    profile = _profile_for(settings)
+    if not settings.google_maps_server_key:
+        raise _fail("GOOGLE_MAPS_SERVER_KEY가 없어 영업시간을 확인할 수 없습니다")
+    status, error, rows = "ok", None, 0
+    try:
+        with job_lock(settings.lock_path, "hours-refresh"), httpx.Client(timeout=15.0) as http:
+            with session_scope(engine) as session:
+                ids = _window_trips(session, trip, defaults.trip_mode.hours_refresh_days)
+            if not ids:
+                typer.echo(
+                    f"출발 {defaults.trip_mode.hours_refresh_days}일 전부터 여행 끝까지만 검사합니다 (대상 없음)"
+                )
+            for t_id in ids:
+                try:
+                    with session_scope(engine) as session:
+                        t = session.get(Trip, t_id)
+                        assert t is not None
+                        active = session.scalar(
+                            select(Itinerary).where(Itinerary.trip_id == t_id, Itinerary.status == "active")
+                        )
+                        if active is None:
+                            typer.echo(f"#{t_id} 일정이 없어 건너뜀")
+                            continue
+                        city = load_city(settings.cities_path, t.city_key)
+                        client = _places_client(session, http, settings, defaults)
+                        ctx = prepare(
+                            session, trip=t, city=city, profile=profile, settings=settings, http=http, client=client
+                        )
+                        r = refresh_hours(session, ctx, active)
+                    rows += len(r.added) + len(r.resolved)
+                    typer.echo(f"#{t_id} 새 경고 {len(r.added)}건, 풀린 경고 {len(r.resolved)}건")
+                    for line in r.added:
+                        typer.echo(f"  + {line}")
+                    for line in r.resolved:
+                        typer.echo(f"  - {line}")
+                except (FreeTierExceededError, PlacesError, httpx.HTTPError) as e:
+                    status, error = ("quota" if isinstance(e, FreeTierExceededError) else "error"), str(e)[:300]
+                    typer.echo(f"#{t_id} 검사 실패: {e}", err=True)
+    except JobLockedError as e:
+        raise _fail("이미 실행 중입니다", EXIT_LOCKED) from e
+    _log_job(engine, "hours-refresh", status, rows, error)
+    if status != "ok":
+        raise typer.Exit(EXIT_SYSTEM_ERROR)
+
+
+@app.command(
+    name="rain-plans",
+    help="비 예보(강수확률 기준 이상)가 있는 여행 날짜마다 AI가 비 오는 날 대안을 미리 만들어 둡니다.",
+)
+def rain_plans(
+    trip: Annotated[int | None, typer.Option("--trip", help="이 여행만 (기본: 기간에 든 모든 여행)")] = None,
+) -> None:
+    """Run the rain plan for each upcoming rainy date of trips in their window."""
+    from dongseon.db.models import Itinerary
+    from dongseon.llm.claude_cli import ClaudeCli, LlmError
+    from dongseon.tripmode import trip_clock
+    from dongseon.tripmode.weather import weather_days
+
+    settings = get_settings()
+    upgrade_schema(settings.database_file)
+    engine = get_engine(settings.database_file)
+    cfg = load_defaults(settings.defaults_file).trip_mode
+    llm = ClaudeCli(engine, model=settings.llm_model, daily_token_limit=settings.llm_daily_token_limit)
+    status, error = "ok", None
+    try:
+        with job_lock(settings.lock_path, "review"), httpx.Client(timeout=15.0) as http:
+            with session_scope(engine) as session:
+                todo: list[tuple[int, date]] = []
+                for t_id in _window_trips(session, trip, cfg.window_days):
+                    t = session.get(Trip, t_id)
+                    assert t is not None
+                    it_id = session.scalar(
+                        select(Itinerary.id).where(Itinerary.trip_id == t_id, Itinerary.status == "active")
+                    )
+                    today = trip_clock(t).today
+                    if it_id is not None:
+                        todo += [
+                            (it_id, d)
+                            for d, w in sorted(weather_days(session, t, cfg).items())
+                            if w.rainy and d >= today
+                        ]
+            if not todo:
+                typer.echo(f"강수확률 {cfg.rain_probability_pct}% 이상인 여행 날짜가 없습니다")
+            for it_id, d in todo:
+                try:
+                    typer.echo(f"{d:%m/%d} 비 오는 날 대안: {_review_version(engine, http, llm, it_id, d, False)}")
+                except (LlmError, ValueError, FreeTierExceededError, httpx.HTTPError) as e:
+                    status, error = ("quota" if isinstance(e, FreeTierExceededError) else "error"), str(e)[:300]
+                    typer.echo(f"{d:%m/%d} 실패: {e}", err=True)
+    except JobLockedError as e:
+        raise _fail("이미 실행 중입니다", EXIT_LOCKED) from e
+    _log_job(engine, "rain-plans", status, len(todo) if status == "ok" else 0, error)
+    if status != "ok":
+        raise typer.Exit(EXIT_SYSTEM_ERROR)
+
+
+def _research_job(job: str, trip: int | None, run: "Callable[..., str]", *, window: bool = False) -> None:
+    """Run one AI research step for each unfinished trip (or one trip) under a job lock and log it.
+
+    With ``window``, only trips inside their trip window (``trip_mode.window_days`` before the start until the end).
+    """
     from dongseon.core.profile import load_profile
     from dongseon.llm.claude_cli import ClaudeCli, LlmError
 
@@ -428,6 +602,9 @@ def _research_job(job: str, trip: int | None, run: "Callable[..., str]") -> None
             with session_scope(engine) as session:
                 stmt = select(Trip.id).where(Trip.end_date >= datetime.now(UTC).date())
                 ids = list(session.scalars(stmt if trip is None else select(Trip.id).where(Trip.id == trip)))
+                if window:
+                    days = load_defaults(settings.defaults_file).trip_mode.window_days
+                    ids = [i for i in ids if i in set(_window_trips(session, None, days))]
             if not ids:
                 typer.echo("대상 여행이 없습니다")
             for t_id in ids:
@@ -454,6 +631,7 @@ def _research_job(job: str, trip: int | None, run: "Callable[..., str]") -> None
 def hours_research(
     trip: Annotated[int | None, typer.Option("--trip", help="이 여행만 (기본: 끝나지 않은 모든 여행)")] = None,
     force: Annotated[bool, typer.Option("--force", help="최근에 조사한 곳도 다시 조사")] = False,
+    window: Annotated[bool, typer.Option("--window", help="출발 14일 전부터 여행 끝까지인 여행만 (daily용)")] = False,
 ) -> None:
     """Research holiday-date opening hours with headless Claude Code."""
     from dongseon.llm.hours_research import run_hours_research
@@ -462,7 +640,7 @@ def hours_research(
         r = run_hours_research(session, llm, t, city, force=force)
         return f"{r.pins}곳 조사, 날짜 {r.stored}건 저장 (최근 조사라 건너뜀 {r.skipped}곳)"
 
-    _research_job("hours-research", trip, run)
+    _research_job("hours-research", trip, run, window=window)
 
 
 @app.command(name="area-notes", help="숙소 후보 동네마다 분위기·장단점을 AI가 웹에서 조사합니다 (출처 포함).")
