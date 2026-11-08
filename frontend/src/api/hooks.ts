@@ -20,7 +20,9 @@ import {
   type TodayOut,
   type WeatherListOut,
   type AlertOut,
+  type AppliedOut,
   type BookingsOut,
+  type LocalNamesOut,
   type ChecklistIn,
   type ChecklistItemOut,
   type ChecklistOut,
@@ -269,6 +271,7 @@ export type JobName =
   | 'area-notes'
   | 'weather'
   | 'hours-refresh'
+  | 'local-names'
 
 /** A background job's state; polls every 5 s while it runs. */
 export function useJob(name: JobName) {
@@ -648,4 +651,45 @@ export function useOfflineBundle(tripId: number | null, fallbackLatest = false) 
     refetchInterval: 10 * 60_000,
     retry: false,
   })
+}
+
+/** Local-name coverage and pending AI suggestions. */
+export function useLocalNames(tripId: number | null) {
+  return useQuery({
+    queryKey: ['localNames', tripId],
+    queryFn: () => apiGet<LocalNamesOut>(`/trips/${tripId}/local-names`),
+    enabled: tripId !== null,
+  })
+}
+
+function useLocalNameMutation<V, R>(tripId: number | null, send: (v: V) => Promise<R>) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: send,
+    onSuccess: () => {
+      for (const key of ['localNames', 'pins', 'offline'])
+        void qc.invalidateQueries({ queryKey: [key, tripId] })
+    },
+  })
+}
+
+/** Apply one suggested local name. */
+export function useAcceptLocalName(tripId: number | null) {
+  return useLocalNameMutation(tripId, (id: number) =>
+    apiSend<null>('POST', `/local-names/${id}/accept`),
+  )
+}
+
+/** Reject one suggested local name. */
+export function useRejectLocalName(tripId: number | null) {
+  return useLocalNameMutation(tripId, (id: number) =>
+    apiSend<null>('POST', `/local-names/${id}/reject`),
+  )
+}
+
+/** Apply every suggestion the search confirmed. */
+export function useAcceptVerifiedLocalNames(tripId: number | null) {
+  return useLocalNameMutation(tripId, () =>
+    apiSend<AppliedOut>('POST', `/trips/${tripId}/local-names/accept-verified`),
+  )
 }

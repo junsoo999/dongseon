@@ -56,14 +56,22 @@ function Warnings({ items }: { items: string[] }) {
   )
 }
 
-function StayRow({ time, text }: { time: string | null; text: string }) {
+function StayRow({
+  time,
+  text,
+  airport = false,
+}: {
+  time: string | null
+  text: string
+  airport?: boolean
+}) {
   return (
     <li className="flex items-center gap-3">
       <span className="w-12 shrink-0 text-right text-sm font-semibold tabular-nums text-gray-500">
         {time ?? ''}
       </span>
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-slate-100">
-        🏨
+        {airport ? '✈️' : '🏨'}
       </span>
       <span className="text-sm text-gray-600">{text}</span>
     </li>
@@ -220,7 +228,11 @@ function DayTimeline({
       )}
       <Warnings items={day.warnings} />
       <ol className="space-y-2">
-        <StayRow time={day.start} text={`${day.depot}에서 출발`} />
+        <StayRow
+          time={day.start}
+          text={`${day.start_place ?? day.depot}에서 출발`}
+          airport={!!day.start_place}
+        />
         {day.items.map((item, i) => (
           <FragmentRows key={item.id} item={item} n={i + 1} onHours={() => onHours(item)} />
         ))}
@@ -234,7 +246,15 @@ function DayTimeline({
                 </span>
               </li>
             ) : null}
-            <StayRow time={day.back_at} text={`${day.depot} 도착 (하루 끝 ${day.end})`} />
+            <StayRow
+              time={day.back_at}
+              airport={!!day.end_place}
+              text={
+                day.end_place
+                  ? `${day.end_place} 도착 (늦어도 ${day.end})`
+                  : `${day.depot} 도착 (하루 끝 ${day.end})`
+              }
+            />
           </>
         )}
       </ol>

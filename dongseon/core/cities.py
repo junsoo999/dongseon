@@ -24,6 +24,9 @@ class Airport(BaseModel):
     code: str
     query: str
     express: list[ExpressLink] = Field(default_factory=list)
+    # Pins this close to the airport are visited on the day the trip passes through it (assumption: the
+    # terminals and the shops next to them, not the nearby town).
+    zone_km: float = Field(default=3.0, gt=0)
 
 
 class StayArea(BaseModel):

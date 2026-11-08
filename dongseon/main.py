@@ -18,6 +18,7 @@ from dongseon.api.routes import (
     hours,
     itineraries,
     jobs,
+    local_names,
     places,
     prep,
     prices,
@@ -109,6 +110,7 @@ def create_app() -> FastAPI:
     app.include_router(today.router, prefix="/api")
     app.include_router(prep.router, prefix="/api")
     app.include_router(exports.router, prefix="/api")
+    app.include_router(local_names.router, prefix="/api")
     app.include_router(jobs.router, prefix="/api")
     add_error_handlers(app)
     mount_frontend(app, FRONTEND_DIST)  # after the API routes so /api wins

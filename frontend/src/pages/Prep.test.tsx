@@ -155,6 +155,49 @@ describe('Prep', () => {
     expect(screen.getByRole('link', { name: '경로' })).toBeInTheDocument()
   })
 
+  it('applies AI local names: all verified at once, or one by one', async () => {
+    const s = (id: number, label: string, name: string, verified: boolean) => ({
+      id,
+      pin_id: id,
+      label,
+      name_local: name,
+      sources: [{ title: '공식', url: 'https://example.org/' }],
+      confidence: 'high',
+      verified,
+      created_at: '2030-12-01T00:00:00Z',
+    })
+    const fetch = mockApi([
+      [
+        '/local-names',
+        {
+          total: 3,
+          filled: 0,
+          suggestions: [s(1, '박물관', 'テスト博物館', true), s(2, '시장', 'テスト市場', false)],
+        },
+      ],
+      ['/offline', offline],
+      ['/api/trips', [trip]],
+    ])
+    renderPage()
+    expect(await screen.findByText(/현지 이름 0\/3곳/)).toBeInTheDocument()
+    expect(screen.getByText('확인 필요 (검색에 이 장소가 안 나옴)')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'AI로 채우기' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '확인된 1곳 모두 적용' }))
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/trips/1/local-names/accept-verified',
+        expect.objectContaining({ method: 'POST' }),
+      ),
+    )
+    fireEvent.click(screen.getAllByRole('button', { name: '아니에요' })[1])
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/local-names/2/reject',
+        expect.objectContaining({ method: 'POST' }),
+      ),
+    )
+  })
+
   it('reads the saved copy when the server cannot be reached', async () => {
     await saveBundle(offline)
     vi.stubGlobal(

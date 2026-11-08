@@ -225,3 +225,24 @@ def area_notes_payload(trip: Trip, city: CityConfig, profile: Profile) -> dict:
         "prefer": profile.stay.prefer,
         "wants": profile.stay.wants,
     }
+
+
+def local_names_payload(city: CityConfig, *, pins: list[TripPin], rejected: dict[int, list[str]]) -> dict:
+    """Input for ``local_names``: the user's labels, categories and notes, and names the user rejected.
+
+    No Google names, addresses or coordinates: the model identifies the place from the user's own label.
+    """
+    return {
+        "city": city.name,
+        "country": city.country,
+        "places": [
+            {
+                "pin_id": p.id,
+                "label": p.place.label,
+                "category": p.place.category,
+                "note": " / ".join(x for x in (p.place.user_note, p.note) if x) or None,
+            }
+            for p in pins
+        ],
+        "rejected": [{"pin_id": k, "names": v} for k, v in sorted(rejected.items()) if v],
+    }

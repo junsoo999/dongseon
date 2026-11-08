@@ -145,6 +145,6 @@ def build_export(session: Session, it: Itinerary, trip: Trip, city: CityConfig) 
                     warnings=list(extra.get("warnings") or []),
                 )
             )
-        days.append(PlanDay(day=d, depot=info.get("depot") or "", stops=stops))
+        days.append(PlanDay(day=d, depot=info.get("start_place") or info.get("depot") or "", stops=stops))
     days.sort(key=lambda x: x.day)
     return PlanExport(trip=trip, city=city, version=it.version, itinerary_id=it.id, days=days)

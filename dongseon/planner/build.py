@@ -7,6 +7,7 @@ fetched for must/want pins and kept in process memory only.
 """
 
 import json
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, time, timedelta
@@ -18,17 +19,19 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from dongseon.api.routes.flights import _reference
-from dongseon.api.routes.stays import build_score
+from dongseon.api.routes.stays import airport_accesses, build_score
+from dongseon.core.airports import load_airports
 from dongseon.core.cities import Approx, CityConfig
 from dongseon.core.config import Settings
 from dongseon.core.profile import Profile, TimeWindow
 from dongseon.db.models import FlightOption, HoursOverride, Itinerary, ItineraryItem, Stay, Trip, TripPin
 from dongseon.flights.evaluate import LegTimes, evaluate
 from dongseon.matrix.approx import approx_leg
-from dongseon.places.service import coords_for
+from dongseon.places.service import coords_for, distance_m
 from dongseon.planner.hours import HOURS_CACHE, DayHours, GoogleHours, OverrideRow, google_weekday, hours_on
 from dongseon.planner.solver import DAY_MIN, Day, Stop, Visit, schedule, solve
 from dongseon.sources.google_places import GooglePlacesClient, LatLng, PlaceNotFoundError, PlacesError
+from dongseon.stays.score import AirportAccess, airport_minutes
 
 PENALTY_SCALE = 10_000
 HOURS_FOR = ("must", "want")  # Enterprise lookups only where they matter
@@ -145,6 +148,39 @@ def edit_of(it: Itinerary, *, resolve: bool = False) -> Edit:
     )
 
 
+@dataclass(frozen=True)
+class AirportPoint:
+    """An airport as a day's start or end point (minutes to it use its express links)."""
+
+    code: str
+    label: str
+    access: AirportAccess
+
+
+def _latlng(point: object) -> LatLng:
+    if isinstance(point, AirportPoint):
+        return point.access.point
+    assert isinstance(point, LatLng)
+    return point
+
+
+def airport_zone_pins(
+    pins: list[TripPin], coords: dict[str, LatLng], accesses: dict[str, AirportAccess], city: CityConfig
+) -> dict[int, str]:
+    """Pins within an airport's ``zone_km``, mapped to that airport's code."""
+    zone_m = {a.code: a.zone_km * 1000 for a in city.airports}
+    out: dict[int, str] = {}
+    for p in pins:
+        point = coords.get(p.place.google_place_id or "")
+        if point is None:
+            continue
+        for code, acc in accesses.items():
+            if distance_m(point, acc.point) <= zone_m.get(code, 0):
+                out[p.id] = code
+                break
+    return out
+
+
 @dataclass
 class PlanContext:
     """Everything a version needs: days, stops with per-day windows, opening hours and the travel function."""
@@ -156,6 +192,7 @@ class PlanContext:
     days: list[Day]
     depot_labels: dict[int, str]
     depot_points: dict[int, dict[str, object]]  # user or config data only: {"lat", "lng"} or {"place_id"}
+    endpoints: dict[int, tuple[str | None, str | None]]  # day -> (start place, end place) when not the stay
     day_warnings: dict[int, list[str]]
     pins: dict[int, TripPin]
     stops: dict[int, Stop]
@@ -205,16 +242,44 @@ def prepare(
     flight = session.scalar(
         select(FlightOption).where(FlightOption.trip_id == trip.id, FlightOption.status == "booked")
     )
+    ev = None
+    last = len(dates) - 1
     if flight:
         legs = [LegTimes(lg.direction, lg.dep_airport, lg.dep_at, lg.arr_airport, lg.arr_at) for lg in flight.legs]
         ev = evaluate(legs, profile.buffers_min, access)
         if ev and ev.ready_at:
             windows[0][0] = max(day_start, _local_minutes(ev.ready_at, tz, dates[0]))
         if ev and ev.leave_by:
-            windows[len(dates) - 1][1] = min(day_end, _local_minutes(ev.leave_by, tz, dates[-1]))
+            windows[last][1] = min(day_end, _local_minutes(ev.leave_by, tz, dates[-1]))
     else:
         warnings[0].append("확정한 항공편이 없어 첫날을 하루 종일로 계산했습니다")
-        warnings[len(dates) - 1].append("확정한 항공편이 없어 마지막 날을 하루 종일로 계산했습니다")
+        warnings[last].append("확정한 항공편이 없어 마지막 날을 하루 종일로 계산했습니다")
+
+    # A day with pins next to its arrival or departure airport starts or ends at that airport instead. Without a
+    # booked flight, the last day is assumed to leave from the airport most of those pins are next to.
+    start_at: dict[int, AirportPoint] = {}
+    end_at: dict[int, AirportPoint] = {}
+    accesses = airport_accesses(session, client, city) if ev or not flight else {}
+    zone = airport_zone_pins(pins, coords, accesses, city)
+    names = load_airports(settings.airports_file)
+
+    def airport_at(code: str) -> AirportPoint:
+        info = names.get(code)
+        return AirportPoint(code, f"{info.name if info else code} 공항", accesses[code])
+
+    codes = set(zone.values())
+    if ev:
+        if ev.ready_at and ev.access_in_min is not None and ev.arrival_airport in codes:
+            start_at[0] = airport_at(ev.arrival_airport)
+            windows[0][0] -= ev.access_in_min
+        if ev.leave_by and ev.access_out_min is not None and ev.departure_airport in codes:
+            end_at[last] = airport_at(ev.departure_airport)
+            windows[last][1] += ev.access_out_min
+    elif not flight and codes:
+        end_at[last] = airport_at(Counter(zone.values()).most_common(1)[0][0])
+        warnings[last].append(
+            f"확정한 항공편이 없어 {end_at[last].label}에서 출국한다고 보고 공항 근처 장소를 넣었습니다"
+        )
 
     # Depots: the stay of that night (or of the night before on the last day), else the reference area.
     days: list[Day] = []
@@ -240,7 +305,7 @@ def prepare(
         start, end = windows[i]
         if end - start < 60:
             warnings[i].append("이 날은 쓸 수 있는 시간이 1시간도 안 됩니다")
-        days.append(Day(i, start, max(start, end), point))
+        days.append(Day(i, start, max(start, end), point, start_point=start_at.get(i), end_point=end_at.get(i)))
 
     # Opening hours per pin and date (all dates, so user-placed visits can be checked too).
     overrides: dict[tuple[int, date], list[OverrideRow]] = {}
@@ -289,12 +354,33 @@ def prepare(
                 wins = [(t, t + p.dwell_min)] if 0 <= t < DAY_MIN else []
             if wins:
                 per_day[i] = wins
+        # Next to an airport: only on the day the trip passes through it (when there is such a day).
+        if p.id in zone and not p.locked_date:
+            via = {i for i, a in (*start_at.items(), *end_at.items()) if a.code == zone[p.id]}
+            if via:
+                per_day = {i: w for i, w in per_day.items() if i in via}
         stops[p.id] = Stop(p.id, point, p.dwell_min, weights.get(p.priority, 1) * PENALTY_SCALE, per_day)
 
+    zone_access = {
+        coords[gid]: accesses[zone[p.id]] for p in pins if p.id in zone and (gid := p.place.google_place_id)
+    }
+
     def travel(a: object, b: object) -> int:
+        if isinstance(a, AirportPoint) or isinstance(b, AirportPoint):
+            airport, other = (a, b) if isinstance(a, AirportPoint) else (b, a)
+            assert isinstance(airport, AirportPoint)
+            return airport_minutes(_latlng(other), airport.access, approx)
         assert isinstance(a, LatLng) and isinstance(b, LatLng)
         leg = approx_leg(a, b, approx)
-        return leg.minutes + (profile.buffers_min.transfer if leg.mode == "rail" else 0)
+        minutes = leg.minutes + (profile.buffers_min.transfer if leg.mode == "rail" else 0)
+        # To or from a pin next to an airport, the airport's express link may be faster.
+        for here, there in ((b, a), (a, b)):
+            acc = zone_access.get(here)
+            if acc is not None and there not in zone_access:
+                minutes = min(
+                    minutes, airport_minutes(there, acc, approx) + approx_leg(acc.point, here, approx).minutes
+                )
+        return minutes
 
     return PlanContext(
         trip=trip,
@@ -304,6 +390,10 @@ def prepare(
         days=days,
         depot_labels=depot_labels,
         depot_points=depot_points,
+        endpoints={
+            i: (start_at[i].label if i in start_at else None, end_at[i].label if i in end_at else None)
+            for i in set(start_at) | set(end_at)
+        },
         day_warnings=warnings,
         pins={p.id: p for p in pins},
         stops=stops,
@@ -432,14 +522,13 @@ def _store(
         day = ctx.days[i]
         order = [ctx.stops[pid] for pid in layout.get(i, [])]
         visits, (back_abs, back_move) = schedule(day, order, ctx.travel)
-        prev = day.depot
+        prev = day.origin
         lunch = dinner = False
         for seq, v in enumerate(visits):
             pin = ctx.pins[v.key]
             h = ctx.hours.get(pin.id, {}).get(i)
             here = ctx.stops[v.key].point
-            assert isinstance(prev, LatLng) and isinstance(here, LatLng)
-            mode = approx_leg(prev, here, ctx.approx).mode
+            mode = approx_leg(_latlng(prev), _latlng(here), ctx.approx).mode
             prev = here
             local_start, local_end = v.start - i * DAY_MIN, v.end - i * DAY_MIN
             for meal in ("lunch", "dinner"):
@@ -489,6 +578,8 @@ def _store(
             "end_min": day.end_min,
             "depot": ctx.depot_labels[i],
             "depot_point": ctx.depot_points.get(i),
+            "start_place": ctx.endpoints.get(i, (None, None))[0],
+            "end_place": ctx.endpoints.get(i, (None, None))[1],
             "return_min": return_min if visits else None,
             "return_move_min": back_move if visits else None,
             "warnings": dw,

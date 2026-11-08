@@ -104,6 +104,7 @@ uv run --no-sync dongseon scout [--trip <id>] [--only place|stay] [--force]   # 
 uv run --no-sync dongseon review [--itinerary <id>] [--rain YYYY-MM-DD] [--force]  # AI plan review / rain plan (~1 min)
 uv run --no-sync dongseon hours-research [--trip <id>] [--force]   # holiday opening hours (minutes, web)
 uv run --no-sync dongseon area-notes [--trip <id>] [--force]       # stay area notes (minutes, web)
+uv run --no-sync dongseon local-names [--trip <id>] [--force]      # local-language place names (minutes, web)
 uv run --no-sync dongseon weather [--trip <id>]                    # Open-Meteo forecast / climate for trip dates
 uv run --no-sync dongseon hours-refresh [--trip <id>]              # from D-7: re-check the plan with Google hours
 uv run --no-sync dongseon rain-plans [--trip <id>]                 # AI rain plan for each rainy forecast date

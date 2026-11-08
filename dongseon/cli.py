@@ -614,7 +614,7 @@ def _research_job(job: str, trip: int | None, run: "Callable[..., str]", *, wind
                         assert t is not None
                         city = load_city(settings.cities_path, t.city_key)
                         typer.echo(f"#{t_id} {run(session, llm, t, city, profile)}")
-                except LlmError as e:
+                except (LlmError, PlacesError, FreeTierExceededError) as e:
                     status, error = "error", str(e)[:300]
                     typer.echo(f"#{t_id} 실패: {e}", err=True)
     except JobLockedError as e:
@@ -656,6 +656,34 @@ def area_notes(
         return "최근에 같은 조건으로 조사해서 건너뜀 (--force로 다시)" if r.skipped else f"동네 메모 {r.stored}곳"
 
     _research_job("area-notes", trip, run)
+
+
+@app.command(
+    name="local-names",
+    help="현지 이름이 없는 장소의 일본어 이름을 AI가 웹에서 찾고 Google 무료 검색으로 확인합니다 (제안만 저장).",
+)
+def local_names(
+    trip: Annotated[int | None, typer.Option("--trip", help="이 여행만 (기본: 끝나지 않은 모든 여행)")] = None,
+    force: Annotated[bool, typer.Option("--force", help="입력이 같아도 다시 조사")] = False,
+) -> None:
+    """Research local-language names for pins without one."""
+    from dongseon.llm.local_names import run_local_names
+
+    settings = get_settings()
+    if not settings.google_maps_server_key:
+        raise _fail("GOOGLE_MAPS_SERVER_KEY가 .env에 없습니다")
+    defaults = load_defaults(settings.defaults_file)
+
+    def run(session, llm, t, city, profile) -> str:
+        with httpx.Client(timeout=15.0) as http:
+            client = _places_client(session, http, settings, defaults)
+            assert client is not None
+            r = run_local_names(session, llm, client, t, city, force=force)
+        if r.skipped:
+            return "최근에 같은 조건으로 조사해서 건너뜀 (--force로 다시)"
+        return f"{r.pins}곳 조사, 제안 {r.stored}개 (검색으로 확인 {r.verified}개)"
+
+    _research_job("local-names", trip, run)
 
 
 @app.command(help="실시간 가격을 가져옵니다: Ignav 항공 운임과 楽天トラベル 빈방 (끝나지 않은 여행).")
