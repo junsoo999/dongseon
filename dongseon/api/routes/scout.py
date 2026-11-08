@@ -126,6 +126,8 @@ def accept(suggestion_id: int, session: SessionDep, defaults: DefaultsDep) -> Ac
             source_ref=source_url,
             note=item.why,
         )
+        if item.name_local and not place.local_name:
+            place.local_name = item.name_local
         try:
             pin = pin_place(session, trip, place, defaults.categories, added_by="ai")
         except DuplicatePinError:

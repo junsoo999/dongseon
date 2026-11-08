@@ -70,6 +70,7 @@ class Place(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     google_place_id: Mapped[str | None] = mapped_column(String, unique=True)
     label: Mapped[str]
+    local_name: Mapped[str | None]  # the user's (or accepted AI research's) local-language name, for My Maps export
     category: Mapped[str]
     user_note: Mapped[str | None]
     tag: Mapped[str | None]  # e.g. the Takeout list name
@@ -406,4 +407,19 @@ class TripAlert(Base):
     itinerary_id: Mapped[int | None] = mapped_column(ForeignKey("itineraries.id", ondelete="SET NULL"))
     payload_json: Mapped[str]  # {"added": [...], "resolved": [...]}
     status: Mapped[str] = mapped_column(default="new")  # new | dismissed
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class ChecklistItem(Base):
+    """A preparation checklist entry for a trip (seeded from ``config/checklist.yaml``, then the user's own)."""
+
+    __tablename__ = "checklist_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), index=True)
+    section: Mapped[str]
+    text: Mapped[str]
+    url: Mapped[str | None]
+    done: Mapped[bool] = mapped_column(default=False)
+    sort: Mapped[int]
     created_at: Mapped[datetime] = mapped_column(UTCDateTime())

@@ -15,6 +15,26 @@ const DEFAULTS: Array<[string, unknown]> = [
   ['/hours-research', { dates: [], holiday_note: null, places: [] }],
   ['/area-notes', []],
   ['/alerts', []],
+  ['/checklist', { items: [], template_as_of: '2026-11-08' }],
+  ['/bookings', { flights: [], stays: [], reservations: [] }],
+  [
+    '/offline',
+    {
+      trip: {
+        id: 1,
+        title: '도쿄',
+        timezone: 'Asia/Tokyo',
+        start_date: '2030-12-28',
+        end_date: '2030-12-29',
+      },
+      generated_at: '2030-12-27T00:00:00Z',
+      itinerary_id: null,
+      version: null,
+      days: [],
+      checklist: [],
+      bookings: { flights: [], stays: [], reservations: [] },
+    },
+  ],
   [
     '/weather',
     {

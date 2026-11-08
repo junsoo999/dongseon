@@ -18,6 +18,7 @@ const DWELL_STEP = 15
 
 interface Draft {
   label: string
+  localName: string
   category: string
   priority: Priority
   dwell: number
@@ -28,6 +29,7 @@ interface Draft {
 function toDraft(pin: PinOut): Draft {
   return {
     label: pin.label,
+    localName: pin.local_name ?? '',
     category: pin.category,
     priority: isPriority(pin.priority) ? pin.priority : 'want',
     dwell: pin.dwell_min,
@@ -75,6 +77,7 @@ function PinEditForm({
     const body: Partial<PinPatch> & { id: number } = {
       id: pin.id,
       label: draft.label.trim(),
+      local_name: draft.localName,
       category: draft.category,
       priority: draft.priority,
       dwell_min: draft.dwell,
@@ -133,6 +136,19 @@ function PinEditForm({
           maxLength={100}
           className={inputClass}
         />
+      </label>
+      <label className="block text-sm">
+        <span className="mb-1 block text-gray-600">현지 이름 (선택)</span>
+        <input
+          value={draft.localName}
+          onChange={(e) => setDraft({ ...draft, localName: e.target.value })}
+          maxLength={100}
+          placeholder="예: 築地場外市場"
+          className={inputClass}
+        />
+        <span className="mt-1 block text-xs text-gray-500">
+          내 지도 CSV에서 이 이름으로 위치를 찾습니다.
+        </span>
       </label>
 
       <fieldset>

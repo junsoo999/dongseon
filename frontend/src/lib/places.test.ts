@@ -10,6 +10,7 @@ function pin(over: Partial<PinOut>): PinOut {
     place_id: 1,
     google_place_id: 'g',
     label: '가',
+    local_name: null,
     category: 'food',
     user_note: null,
     tag: null,

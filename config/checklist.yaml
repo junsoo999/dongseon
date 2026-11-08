@@ -1,0 +1,31 @@
+# Preparation checklist template. "준비" tab → "기본 항목 채우기" copies these into the trip (then they are the
+# household's own and can be edited, checked or deleted). Facts that change carry a source link and as_of date
+# instead of numbers: always check the official page.
+as_of: 2026-11-08
+sections:
+  - name: 서류·입국
+    items:
+      - text: 여권 유효기간 확인 (모든 동행자)
+      - text: Visit Japan Web 등록 (입국 심사·세관 신고 QR)
+        url: https://www.vjw.digital.go.jp/
+      - text: 항공권·숙소 예약 확인 메일 보관 (오프라인에서도 열리게)
+      - text: 여행자 보험
+  - name: 돈·통신
+    items:
+      - text: 엔화 현금 / 트래블 카드 준비
+      - text: 해외 결제되는 카드 확인
+      - text: eSIM·로밍·포켓 와이파이
+      - text: 교통카드 (모바일 Suica·PASMO 등) 설정
+  - name: 짐
+    items:
+      - text: 충전기·보조배터리
+      - text: 상비약
+      - text: 날씨에 맞는 옷 (오늘 탭의 날씨 확인)
+  - name: dongseon 출발 전 점검
+    items:
+      - text: 집 Mac 잠자기 끄기·정전 후 자동 시작 (README "출발 전 점검")
+      - text: 휴대폰 데이터망(와이파이 끔)으로 원격 주소 접속 확인
+      - text: 휴대폰에서 오늘 탭을 한 번 열어 오프라인 저장 → 비행기 모드로 열리는지 확인
+      - text: 내 지도용 CSV 내보내서 Google 내 지도에 가져오기
+        url: https://www.google.com/maps/d/
+      - text: 일정 ICS를 휴대폰 캘린더에 가져오기

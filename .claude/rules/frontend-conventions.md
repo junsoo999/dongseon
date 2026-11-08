@@ -53,6 +53,9 @@ frontend/src/
 - Everything AI-generated carries "AI 제안".
 - Weather is sky (fetched data) with the Open-Meteo credit next to it; climate figures read "평년". A rainy
   forecast day fills the chip and turns the "☔ 비 오면?" button into "☔ 비 예보".
+- Offline: `useOffline()` (`lib/useOffline.ts`) keeps the phone's copy fresh and reports when the server cannot be
+  reached (`isUnreachable`: network error or 5xx). 오늘 and 준비 then render the saved copy read-only with its saved
+  time; `OfflineBanner` says so. The service worker registers only in production builds in a secure context.
 - Wrap maps in `MapBoundary` (done by `MapLayout`): a Google Maps failure must not take down the list beside it.
 - Google content shown without a Google map follows the attribution rules in `docs/google-terms.md`.
 

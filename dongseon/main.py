@@ -12,12 +12,14 @@ from fastapi.staticfiles import StaticFiles
 
 from dongseon import __version__
 from dongseon.api.routes import (
+    exports,
     flights,
     health,
     hours,
     itineraries,
     jobs,
     places,
+    prep,
     prices,
     research,
     review,
@@ -33,6 +35,7 @@ from dongseon.db.session import upgrade_schema
 from dongseon.sources.google_places import PlacesAuthError, PlacesError
 
 FRONTEND_DIST = REPO_ROOT / "frontend" / "dist"
+NO_CACHE = {"Cache-Control": "no-cache"}  # the service worker and the shell must be revalidated to update
 mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 
@@ -50,8 +53,8 @@ def mount_frontend(app: FastAPI, dist: Path) -> None:
             raise HTTPException(status_code=404)
         candidate = (dist / path).resolve()
         if path and candidate.is_file() and dist.resolve() in candidate.parents:
-            return FileResponse(candidate)
-        return FileResponse(index)
+            return FileResponse(candidate, headers=NO_CACHE if path == "sw.js" else None)
+        return FileResponse(index, headers=NO_CACHE)
 
 
 @asynccontextmanager
@@ -104,6 +107,8 @@ def create_app() -> FastAPI:
     app.include_router(review.router, prefix="/api")
     app.include_router(research.router, prefix="/api")
     app.include_router(today.router, prefix="/api")
+    app.include_router(prep.router, prefix="/api")
+    app.include_router(exports.router, prefix="/api")
     app.include_router(jobs.router, prefix="/api")
     add_error_handlers(app)
     mount_frontend(app, FRONTEND_DIST)  # after the API routes so /api wins

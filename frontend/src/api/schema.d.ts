@@ -984,6 +984,174 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/trips/{trip_id}/checklist': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Checklist
+     * @description The trip's checklist.
+     */
+    get: operations['checklist_api_trips__trip_id__checklist_get']
+    put?: never
+    /**
+     * Add Checklist Item
+     * @description Add the user's own entry at the end.
+     */
+    post: operations['add_checklist_item_api_trips__trip_id__checklist_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/checklist/seed': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Seed Checklist
+     * @description Copy the template's lines the trip does not have yet (matched by text).
+     */
+    post: operations['seed_checklist_api_trips__trip_id__checklist_seed_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/checklist/{item_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete Checklist Item
+     * @description Remove an entry.
+     */
+    delete: operations['delete_checklist_item_api_checklist__item_id__delete']
+    options?: never
+    head?: never
+    /**
+     * Update Checklist Item
+     * @description Check, uncheck or reword an entry.
+     */
+    patch: operations['update_checklist_item_api_checklist__item_id__patch']
+    trace?: never
+  }
+  '/api/trips/{trip_id}/bookings': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Bookings
+     * @description Booked flights, booked stays and reserved time slots.
+     */
+    get: operations['bookings_api_trips__trip_id__bookings_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/itineraries/{itinerary_id}/export.ics': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Export Ics
+     * @description Planned visits as calendar events.
+     */
+    get: operations['export_ics_api_itineraries__itinerary_id__export_ics_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/itineraries/{itinerary_id}/print': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Export Print
+     * @description A print-friendly page of the plan.
+     */
+    get: operations['export_print_api_itineraries__itinerary_id__print_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/itineraries/{itinerary_id}/mymaps.zip': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Export Mymaps
+     * @description One Google My Maps import CSV per day, zipped (no coordinates).
+     */
+    get: operations['export_mymaps_api_itineraries__itinerary_id__mymaps_zip_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/offline': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Offline Bundle
+     * @description The active plan, checklist and bookings for the phone to keep in IndexedDB.
+     */
+    get: operations['offline_bundle_api_trips__trip_id__offline_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/jobs/{name}': {
     parameters: {
       query?: never
@@ -1155,6 +1323,70 @@ export interface components {
       secondary_text: string
     }
     /**
+     * BookedFlightOut
+     * @description A booked flight option.
+     */
+    BookedFlightOut: {
+      /** Id */
+      id: number
+      /** Label */
+      label: string
+      /** Total Amount */
+      total_amount: number | null
+      /** Currency */
+      currency: string
+      /** Baggage Note */
+      baggage_note: string | null
+      /** Booking Url */
+      booking_url: string | null
+      /** Note */
+      note: string | null
+      /** Legs */
+      legs: components['schemas']['BookedLegOut'][]
+    }
+    /**
+     * BookedLegOut
+     * @description A booked flight leg in each airport's local time (``YYYY-MM-DDTHH:MM``).
+     */
+    BookedLegOut: {
+      /** Direction */
+      direction: string
+      /** Carrier */
+      carrier: string | null
+      /** Flight No */
+      flight_no: string | null
+      /** Dep Airport */
+      dep_airport: string
+      /** Dep Local */
+      dep_local: string
+      /** Arr Airport */
+      arr_airport: string
+      /** Arr Local */
+      arr_local: string
+    }
+    /**
+     * BookedStayOut
+     * @description A booked stay.
+     */
+    BookedStayOut: {
+      /** Id */
+      id: number
+      /** Label */
+      label: string
+      /** Check In */
+      check_in: string | null
+      /** Check Out */
+      check_out: string | null
+      /** Total Amount */
+      total_amount: number | null
+      /** Currency */
+      currency: string
+      /** Booking Url */
+      booking_url: string | null
+      /** Note */
+      note: string | null
+    }
+    /**
      * BookingIn
      * @description A pasted booking confirmation (never stored).
      */
@@ -1179,6 +1411,18 @@ export interface components {
       }
     }
     /**
+     * BookingsOut
+     * @description Everything booked for the trip.
+     */
+    BookingsOut: {
+      /** Flights */
+      flights: components['schemas']['BookedFlightOut'][]
+      /** Stays */
+      stays: components['schemas']['BookedStayOut'][]
+      /** Reservations */
+      reservations: components['schemas']['ReservationOut'][]
+    }
+    /**
      * CategoryOut
      * @description An app category and its default dwell minutes.
      */
@@ -1187,6 +1431,60 @@ export interface components {
       key: string
       /** Dwell Min */
       dwell_min: number
+    }
+    /**
+     * ChecklistIn
+     * @description A new entry written by the user.
+     */
+    ChecklistIn: {
+      /** Text */
+      text: string
+      /**
+       * Section
+       * @default 기타
+       */
+      section: string
+    }
+    /**
+     * ChecklistItemOut
+     * @description One checklist entry.
+     */
+    ChecklistItemOut: {
+      /** Id */
+      id: number
+      /** Section */
+      section: string
+      /** Text */
+      text: string
+      /** Url */
+      url: string | null
+      /** Done */
+      done: boolean
+      /** Sort */
+      sort: number
+    }
+    /**
+     * ChecklistOut
+     * @description The trip's checklist, in order, with the template's check date.
+     */
+    ChecklistOut: {
+      /** Items */
+      items: components['schemas']['ChecklistItemOut'][]
+      /**
+       * Template As Of
+       * Format: date
+       */
+      template_as_of: string
+    }
+    /**
+     * ChecklistPatch
+     * @description Check, uncheck or reword an entry.
+     */
+    ChecklistPatch: {
+      /** Done */
+      done?: boolean | null
+      /** Text */
+      text?: string | null
     }
     /**
      * CityOut
@@ -1858,6 +2156,92 @@ export interface components {
       url: string
     }
     /**
+     * OfflineDayOut
+     * @description A day as kept offline.
+     */
+    OfflineDayOut: {
+      /**
+       * Date
+       * Format: date
+       */
+      date: string
+      /** Depot */
+      depot: string
+      /** Stops */
+      stops: components['schemas']['OfflineStopOut'][]
+      /** Route Urls */
+      route_urls: string[]
+    }
+    /**
+     * OfflineOut
+     * @description What the phone stores for reading without a connection. No Google hours, travel times or coordinates.
+     */
+    OfflineOut: {
+      trip: components['schemas']['OfflineTripOut']
+      /**
+       * Generated At
+       * Format: date-time
+       */
+      generated_at: string
+      /** Itinerary Id */
+      itinerary_id: number | null
+      /** Version */
+      version: number | null
+      /** Days */
+      days: components['schemas']['OfflineDayOut'][]
+      /** Checklist */
+      checklist: components['schemas']['ChecklistItemOut'][]
+      bookings: components['schemas']['BookingsOut']
+    }
+    /**
+     * OfflineStopOut
+     * @description A visit as kept offline: the plan's own times and the user's text, plus a Maps deep link.
+     */
+    OfflineStopOut: {
+      /** Seq */
+      seq: number
+      /** Start */
+      start: string
+      /** End */
+      end: string
+      /** Label */
+      label: string
+      /** Local Name */
+      local_name: string | null
+      /** Area */
+      area: string | null
+      /** Note */
+      note: string | null
+      /** Google Place Id */
+      google_place_id: string | null
+      /** Directions Url */
+      directions_url: string
+      /** Warnings */
+      warnings: string[]
+    }
+    /**
+     * OfflineTripOut
+     * @description The trip fields the offline screens need.
+     */
+    OfflineTripOut: {
+      /** Id */
+      id: number
+      /** Title */
+      title: string
+      /** Timezone */
+      timezone: string
+      /**
+       * Start Date
+       * Format: date
+       */
+      start_date: string
+      /**
+       * End Date
+       * Format: date
+       */
+      end_date: string
+    }
+    /**
      * OriginOut
      * @description Approximate travel summary from one area or stay (minutes; lower is better).
      */
@@ -1924,6 +2308,8 @@ export interface components {
       google_place_id: string | null
       /** Label */
       label: string
+      /** Local Name */
+      local_name: string | null
       /** Category */
       category: string
       /** User Note */
@@ -1978,6 +2364,11 @@ export interface components {
       clear_locked_date: boolean
       /** Label */
       label?: string | null
+      /**
+       * Local Name
+       * @description empty string clears it
+       */
+      local_name?: string | null
       /** Category */
       category?: string | null
       /**
@@ -2137,6 +2528,22 @@ export interface components {
       priority: string
       /** Days */
       days: components['schemas']['ResearchedDay'][]
+    }
+    /**
+     * ReservationOut
+     * @description A pin with a reserved time slot (restaurant, ticket), in the trip's local time.
+     */
+    ReservationOut: {
+      /** Pin Id */
+      pin_id: number
+      /** Label */
+      label: string
+      /** Start Local */
+      start_local: string
+      /** End Local */
+      end_local: string | null
+      /** Note */
+      note: string | null
     }
     /**
      * ResolveUrlIn
@@ -4393,6 +4800,318 @@ export interface operations {
           [name: string]: unknown
         }
         content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  checklist_api_trips__trip_id__checklist_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ChecklistOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  add_checklist_item_api_trips__trip_id__checklist_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ChecklistIn']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ChecklistItemOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  seed_checklist_api_trips__trip_id__checklist_seed_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ChecklistOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_checklist_item_api_checklist__item_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        item_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_checklist_item_api_checklist__item_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        item_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ChecklistPatch']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ChecklistItemOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  bookings_api_trips__trip_id__bookings_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['BookingsOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  export_ics_api_itineraries__itinerary_id__export_ics_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        itinerary_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  export_print_api_itineraries__itinerary_id__print_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        itinerary_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'text/html': string
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  export_mymaps_api_itineraries__itinerary_id__mymaps_zip_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        itinerary_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  offline_bundle_api_trips__trip_id__offline_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['OfflineOut']
+        }
       }
       /** @description Validation Error */
       422: {

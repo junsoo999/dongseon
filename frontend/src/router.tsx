@@ -4,9 +4,9 @@ import { Flights } from './pages/Flights'
 import { Home } from './pages/Home'
 import { Itinerary } from './pages/Itinerary'
 import { More } from './pages/More'
-import { Placeholder } from './pages/Placeholder'
 import { Places } from './pages/Places'
 import { Stays } from './pages/Stays'
+import { Prep } from './pages/Prep'
 import { Today } from './pages/Today'
 import { Settings } from './pages/Settings'
 
@@ -21,7 +21,7 @@ export const routes = [
       { path: 'flights', element: <Flights /> },
       { path: 'itinerary', element: <Itinerary /> },
       { path: 'today', element: <Today /> },
-      { path: 'prep', element: <Placeholder title="준비" milestone="M5" /> },
+      { path: 'prep', element: <Prep /> },
       { path: 'settings', element: <Settings /> },
       { path: 'more', element: <More /> },
     ],

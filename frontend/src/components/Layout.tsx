@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { tripInProgress } from '../lib/today'
 import { useCurrentTrip } from '../lib/trip'
 import { HealthBadge } from './HealthBadge'
+import { OfflineBanner } from './OfflineBanner'
 
 const OPENED_KEY = 'dongseon.opened'
 
@@ -69,6 +70,7 @@ export function Layout() {
         </div>
       </header>
 
+      <OfflineBanner />
       <main className="min-h-0 flex-1 md:overflow-y-auto">
         <Outlet />
       </main>

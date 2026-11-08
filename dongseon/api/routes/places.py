@@ -77,6 +77,7 @@ class PinPatch(BaseModel):
     locked_date: date | None = None
     clear_locked_date: bool = False
     label: str | None = Field(default=None, min_length=1, max_length=100)
+    local_name: str | None = Field(default=None, max_length=100, description="empty string clears it")
     category: str | None = None
     google_place_id: str | None = Field(default=None, description="manual match for a pending or failed place")
 
@@ -88,6 +89,7 @@ class PinOut(BaseModel):
     place_id: int
     google_place_id: str | None
     label: str
+    local_name: str | None
     category: str
     user_note: str | None
     tag: str | None
@@ -138,6 +140,7 @@ def _pin_out(pin: TripPin, coords: dict) -> PinOut:
         place_id=place.id,
         google_place_id=place.google_place_id,
         label=place.label,
+        local_name=place.local_name,
         category=place.category,
         user_note=place.user_note,
         tag=place.tag,
@@ -267,6 +270,8 @@ def patch_pin(
         pin.locked_date = None if body.clear_locked_date else body.locked_date
     if body.label is not None:
         place.label = body.label.strip()
+    if body.local_name is not None:
+        place.local_name = body.local_name.strip() or None
     if body.category is not None:
         if body.category not in defaults.categories.dwell_min:
             raise HTTPException(status_code=422, detail="알 수 없는 카테고리입니다")
