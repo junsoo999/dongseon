@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import type { DayOut, ItemOut, ItineraryOut } from '../api/client'
+import type { DayOut, ItemOut, ItineraryOut, WeatherOut } from '../api/client'
 import {
   useActiveItinerary,
   useEditItinerary,
   usePlanSuggestions,
   useReviewJob,
+  useTripWeather,
   useStartReview,
   useResolveItinerary,
   useRestoreItinerary,
@@ -13,11 +14,13 @@ import {
 } from '../api/hooks'
 import { DayMap } from '../components/DayMap'
 import { HolidayHours } from '../components/HolidayHours'
+import { HoursAlert } from '../components/HoursAlert'
 import { HoursSheet } from '../components/HoursSheet'
 import { LoadingBlock } from '../components/Loading'
 import { MapLayout, Page } from '../components/MapLayout'
 import { PlanReviewPanel } from '../components/PlanReview'
 import { VersionsSheet } from '../components/VersionsSheet'
+import { WeatherChip, WeatherCredit } from '../components/Weather'
 import { dayLabel } from '../lib/airlines'
 import { directionsUrl, moveLabel } from '../lib/itinerary'
 import {
@@ -35,6 +38,7 @@ import { dayTitles } from '../lib/planReview'
 import { CATEGORY_EMOJI, PRIORITY_LABELS, isPriority } from '../lib/places'
 import { BADGE, BTN } from '../lib/theme'
 import { useCurrentTrip } from '../lib/trip'
+import { weatherLook } from '../lib/weather'
 
 function Warnings({ items }: { items: string[] }) {
   if (items.length === 0) return null
@@ -173,6 +177,7 @@ function VisitRow({ item, n, onHours }: { item: ItemOut; n: number; onHours: () 
 function DayTimeline({
   day,
   title,
+  weather,
   rainCount,
   rainBusy,
   onRain,
@@ -180,11 +185,13 @@ function DayTimeline({
 }: {
   day: DayOut
   title?: string
+  weather?: WeatherOut
   rainCount: number
   rainBusy: boolean
   onRain: () => void
   onHours: (item: ItemOut) => void
 }) {
+  const rainy = weather?.rainy ?? false
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
@@ -199,11 +206,18 @@ function DayTimeline({
           type="button"
           disabled={rainBusy || day.items.length === 0}
           onClick={onRain}
-          className="min-h-9 shrink-0 rounded-xl border border-violet-200 bg-white px-3 text-xs font-semibold text-violet-800 hover:bg-violet-50 disabled:opacity-50"
+          className={`min-h-9 shrink-0 rounded-xl px-3 text-xs font-semibold disabled:opacity-50 ${rainy ? 'bg-violet-600 text-white hover:bg-violet-700' : 'border border-violet-200 bg-white text-violet-800 hover:bg-violet-50'}`}
         >
-          ☔ 비 오면?{rainCount > 0 ? ` · 대안 ${rainCount}` : ''}
+          ☔ {rainy ? '비 예보' : '비 오면?'}
+          {rainCount > 0 ? ` · 대안 ${rainCount}` : rainy ? ' · 대안 만들기' : ''}
         </button>
       </div>
+      {weather && (
+        <p className="flex flex-wrap items-center gap-2">
+          <WeatherChip w={weather} />
+          <WeatherCredit />
+        </p>
+      )}
       <Warnings items={day.warnings} />
       <ol className="space-y-2">
         <StayRow time={day.start} text={`${day.depot}에서 출발`} />
@@ -387,6 +401,7 @@ export function Itinerary() {
   const [versionsOpen, setVersionsOpen] = useState(false)
   const plan = usePlanSuggestions(tripId)
   const reviewJob = useReviewJob(tripId)
+  const weather = useTripWeather(tripId)
   const startReview = useStartReview()
 
   if (trips.isPending) return <p className="p-4 text-gray-500">불러오는 중…</p>
@@ -416,6 +431,7 @@ export function Itinerary() {
   const error = solve.error ?? edit.error ?? resolve.error ?? restore.error
   const dirty = !!(it && draft && !sameDraft(draft, draftOf(it)))
   const titles = dayTitles(plan.data)
+  const weatherByDate = new Map((weather.data?.days ?? []).map((w) => [w.date, w]))
   const reviewRunning = (reviewJob.data?.running ?? false) || startReview.isPending
 
   const saveDraft = (andResolve: boolean) => {
@@ -503,6 +519,9 @@ export function Itinerary() {
           </p>
         </div>
       )}
+      {it && !draft && (
+        <HoursAlert tripId={trip.id} busy={busy} onResolve={() => resolve.mutate(it.id)} />
+      )}
       {it && !draft && !busy && <PlanReviewPanel tripId={trip.id} it={it} />}
       {!draft && !busy && <HolidayHours tripId={trip.id} />}
 
@@ -573,6 +592,11 @@ export function Itinerary() {
                     {i + 1}일차 · {count}곳
                   </span>
                   {dayLabel(`${d.date}T00:00`)}
+                  {weatherByDate.get(d.date) && (
+                    <span className="ml-1">
+                      {weatherLook(weatherByDate.get(d.date)!.code).icon}
+                    </span>
+                  )}
                   {warn && !draft && (
                     <span className="absolute top-1 right-1 size-2 rounded-full bg-amber-400" />
                   )}
@@ -587,6 +611,7 @@ export function Itinerary() {
               <DayTimeline
                 day={day}
                 title={titles.get(day.date)}
+                weather={weatherByDate.get(day.date)}
                 rainCount={
                   (plan.data?.edits ?? []).filter((e) => e.source === 'rain' && e.date === day.date)
                     .length

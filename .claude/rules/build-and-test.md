@@ -104,12 +104,16 @@ uv run --no-sync dongseon scout [--trip <id>] [--only place|stay] [--force]   # 
 uv run --no-sync dongseon review [--itinerary <id>] [--rain YYYY-MM-DD] [--force]  # AI plan review / rain plan (~1 min)
 uv run --no-sync dongseon hours-research [--trip <id>] [--force]   # holiday opening hours (minutes, web)
 uv run --no-sync dongseon area-notes [--trip <id>] [--force]       # stay area notes (minutes, web)
+uv run --no-sync dongseon weather [--trip <id>]                    # Open-Meteo forecast / climate for trip dates
+uv run --no-sync dongseon hours-refresh [--trip <id>]              # from D-7: re-check the plan with Google hours
+uv run --no-sync dongseon rain-plans [--trip <id>]                 # AI rain plan for each rainy forecast date
 ```
 
 ## Daily job, always-on app, remote access (M5)
 
-- `dongseon daily` (launchd `com.dongseon.daily`) refreshes hours, weather and matrices only from D-14 to the end of
-  the active trip, otherwise just FX rates. Each step runs as its own CLI process and keeps going when one fails.
+- `dongseon daily` (launchd `com.dongseon.daily`) runs prices, scout, weather, then the trip-window steps
+  (`hours-refresh` from D-7, `hours-research --window` and `rain-plans` from D-14 until the trip ends). Each step runs
+  as its own CLI process, checks its own window and keeps going when another one fails.
 - `dongseon serve` runs always-on as `com.dongseon.serve` on `127.0.0.1:8100`.
 - Remote access: everything outside `127.0.0.1:8100` (Cloudflare Tunnel, basic auth, routing by hostname) lives in a
   separate shared edge repo used by all self-hosted apps. Do not add proxy, tunnel or auth config here; the domain and

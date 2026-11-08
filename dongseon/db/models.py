@@ -376,3 +376,34 @@ class ItineraryItem(Base):
     warnings_json: Mapped[str | None]
 
     itinerary: Mapped[Itinerary] = relationship(back_populates="items")
+
+
+class Weather(Base):
+    """Daily weather for a city: Open-Meteo forecast (up to 16 days ahead) or past-years climate for the date."""
+
+    __tablename__ = "weather"
+    __table_args__ = (UniqueConstraint("city_key", "day", "kind", name="uq_weather_city_day_kind"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    city_key: Mapped[str]
+    day: Mapped[date] = mapped_column(Date)
+    kind: Mapped[str]  # forecast | climate
+    payload_json: Mapped[str]  # weather code, temperatures, precipitation (see dongseon/sources/open_meteo.py)
+    fetched_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class TripAlert(Base):
+    """Something the household should look at, e.g. warnings that changed when hours were re-checked.
+
+    Holds only the app's own warning text (labels are user data); never Google hours or travel times.
+    """
+
+    __tablename__ = "trip_alerts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str]  # hours_changed
+    itinerary_id: Mapped[int | None] = mapped_column(ForeignKey("itineraries.id", ondelete="SET NULL"))
+    payload_json: Mapped[str]  # {"added": [...], "resolved": [...]}
+    status: Mapped[str] = mapped_column(default="new")  # new | dismissed
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())

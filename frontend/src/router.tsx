@@ -7,6 +7,7 @@ import { More } from './pages/More'
 import { Placeholder } from './pages/Placeholder'
 import { Places } from './pages/Places'
 import { Stays } from './pages/Stays'
+import { Today } from './pages/Today'
 import { Settings } from './pages/Settings'
 
 export const routes = [
@@ -19,7 +20,7 @@ export const routes = [
       { path: 'stays', element: <Stays /> },
       { path: 'flights', element: <Flights /> },
       { path: 'itinerary', element: <Itinerary /> },
-      { path: 'today', element: <Placeholder title="오늘" milestone="M5" /> },
+      { path: 'today', element: <Today /> },
       { path: 'prep', element: <Placeholder title="준비" milestone="M5" /> },
       { path: 'settings', element: <Settings /> },
       { path: 'more', element: <More /> },

@@ -904,6 +904,86 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/trips/{trip_id}/weather': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Trip Weather
+     * @description Stored weather per trip date (forecast over climate); refreshed by the ``weather`` job.
+     */
+    get: operations['trip_weather_api_trips__trip_id__weather_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/today': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Today
+     * @description The day to show now, in the trip's timezone; the phone picks the current and next stop from its clock.
+     */
+    get: operations['today_api_trips__trip_id__today_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/alerts': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Trip Alerts
+     * @description Open alerts about the active version (alerts about older versions are left out).
+     */
+    get: operations['trip_alerts_api_trips__trip_id__alerts_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/alerts/{alert_id}/dismiss': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Dismiss Alert
+     * @description Hide an alert.
+     */
+    post: operations['dismiss_alert_api_alerts__alert_id__dismiss_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/jobs/{name}': {
     parameters: {
       query?: never
@@ -991,6 +1071,27 @@ export interface components {
       name: string
       /** Timezone */
       timezone: string
+    }
+    /**
+     * AlertOut
+     * @description An open alert for the active version.
+     */
+    AlertOut: {
+      /** Id */
+      id: number
+      /** Kind */
+      kind: string
+      /** Itinerary Id */
+      itinerary_id: number | null
+      /** Added */
+      added: string[]
+      /** Resolved */
+      resolved: string[]
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
     }
     /**
      * AreaLinksOut
@@ -2302,6 +2403,31 @@ export interface components {
       status?: ('candidate' | 'booked') | null
     }
     /**
+     * TodayOut
+     * @description What the today tab shows: the day (today during the trip, the first day before it) and its weather.
+     */
+    TodayOut: {
+      /**
+       * Phase
+       * @enum {string}
+       */
+      phase: 'before' | 'during' | 'after'
+      /**
+       * Today
+       * Format: date
+       */
+      today: string
+      /** Days Until */
+      days_until: number
+      /** Itinerary Id */
+      itinerary_id: number | null
+      day: components['schemas']['DayOut'] | null
+      weather: components['schemas']['WeatherOut'] | null
+      fx: components['schemas']['FxOut'] | null
+      /** Weather Attribution */
+      weather_attribution: string
+    }
+    /**
      * TripIn
      * @description A new trip.
      */
@@ -2463,6 +2589,55 @@ export interface components {
       created_at: string
       /** Visits */
       visits: number
+    }
+    /**
+     * WeatherListOut
+     * @description Weather for every trip date that has it, with the attribution to show.
+     */
+    WeatherListOut: {
+      /** Days */
+      days: components['schemas']['WeatherOut'][]
+      /** Rain Probability Pct */
+      rain_probability_pct: number
+      /** Attribution */
+      attribution: string
+      /** Attribution Url */
+      attribution_url: string
+    }
+    /**
+     * WeatherOut
+     * @description One date's weather. ``precip_prob`` is the forecast maximum, or for climate the share of past years with rain.
+     */
+    WeatherOut: {
+      /**
+       * Date
+       * Format: date
+       */
+      date: string
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'forecast' | 'climate'
+      /** Code */
+      code: number | null
+      /** Tmax */
+      tmax: number | null
+      /** Tmin */
+      tmin: number | null
+      /** Precip Mm */
+      precip_mm: number | null
+      /** Precip Prob */
+      precip_prob: number | null
+      /** Rainy */
+      rainy: boolean
+      /** Years */
+      years: number | null
+      /**
+       * Fetched At
+       * Format: date-time
+       */
+      fetched_at: string
     }
   }
   responses: never
@@ -4108,12 +4283,142 @@ export interface operations {
       }
     }
   }
+  trip_weather_api_trips__trip_id__weather_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['WeatherListOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  today_api_trips__trip_id__today_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TodayOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  trip_alerts_api_trips__trip_id__alerts_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AlertOut'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  dismiss_alert_api_alerts__alert_id__dismiss_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        alert_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   job_status_api_jobs__name__get: {
     parameters: {
       query?: never
       header?: never
       path: {
-        name: 'places-resolve' | 'scout' | 'prices' | 'review' | 'hours-research' | 'area-notes'
+        name:
+          | 'places-resolve'
+          | 'scout'
+          | 'prices'
+          | 'review'
+          | 'hours-research'
+          | 'area-notes'
+          | 'weather'
+          | 'hours-refresh'
       }
       cookie?: never
     }
@@ -4144,7 +4449,15 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        name: 'places-resolve' | 'scout' | 'prices' | 'review' | 'hours-research' | 'area-notes'
+        name:
+          | 'places-resolve'
+          | 'scout'
+          | 'prices'
+          | 'review'
+          | 'hours-research'
+          | 'area-notes'
+          | 'weather'
+          | 'hours-refresh'
       }
       cookie?: never
     }

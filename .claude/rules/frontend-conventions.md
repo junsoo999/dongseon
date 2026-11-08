@@ -51,6 +51,9 @@ frontend/src/
   transit results carry "대표 시각 기준".
 - Opening hours always show their source and check date; AI research shows "AI 조사, 출처, 확인 필요".
 - Everything AI-generated carries "AI 제안".
+- Weather is sky (fetched data) with the Open-Meteo credit next to it; climate figures read "평년". A rainy
+  forecast day fills the chip and turns the "☔ 비 오면?" button into "☔ 비 예보".
+- Wrap maps in `MapBoundary` (done by `MapLayout`): a Google Maps failure must not take down the list beside it.
 - Google content shown without a Google map follows the attribution rules in `docs/google-terms.md`.
 
 ## Styling

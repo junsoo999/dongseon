@@ -44,6 +44,8 @@ alwaysApply: true
 - Caching: only latitude/longitude, at most 30 days (`geo_cache`). Names, addresses, opening hours, durations and
   distances are fetched when needed and used within that request; never write them to the DB, disk, logs, fixtures
   for runtime use, or the offline cache. Store only the app's own derived results (plans, warning codes and text).
+  A saved version's hours label keeps only the source for Google hours ("Google", "Google 특별 영업"); the times are
+  filled in at read time from the 10-minute process cache (`planner/build.py` `live_hours_label`) when present.
 - Travel times: Google Routes returns no transit routes in Japan (checked 2026-11-05), so transit times are the
   straight-line approximation in `dongseon/matrix/approx.py` (parameters with sources in the city YAML), always shown
   as "근사". Google WALK is used for walking legs at request time and never stored.
@@ -68,6 +70,20 @@ alwaysApply: true
 - Check terms before integrating a service. Not used, by design: flight search APIs (Amadeus Self-Service ended
   2026-07-17), hotel partner APIs, Tabelog, Naver blogs and booking-site screens (deep links only).
 - Record units of work in `job_log` so jobs resume; retry only transient errors (5xx, timeout) with exponential backoff, max 3.
+- Open-Meteo (`dongseon/sources/open_meteo.py`): free for non-commercial use under 10,000 calls a day, CC BY 4.0, so
+  show "Weather data by Open-Meteo.com" with a link wherever weather appears. Coordinates are the city config center.
+
+## Trip mode
+
+- `dongseon/tripmode/`: dates come from the trip's timezone (`trip_clock`), never the server's or the phone's.
+- `daily` adds `weather` (forecast within 16 days, else the same dates averaged over `trip_mode.climate_years` past
+  years, shown as "평년"), `hours-refresh` (from `trip_mode.hours_refresh_days` before the start), `hours-research
+  --window` and `rain-plans` (from `trip_mode.window_days` before the start). The steps check the window themselves.
+- `hours-refresh` re-times the active version as it is with today's hours (no re-solve, no new version) and stores
+  only the changed warning text as a `trip_alerts` row (`hours_changed`); the same finding is not stored twice, so a
+  dismissed alert stays dismissed. Alerts about older versions are not shown.
+- A day is rainy when the forecast precipitation probability is at least `trip_mode.rain_probability_pct`; climate
+  figures never count. `rain-plans` runs the rain plan for each upcoming rainy date (job lock `review`).
 
 ## Itinerary solver
 

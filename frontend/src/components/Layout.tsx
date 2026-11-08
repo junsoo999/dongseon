@@ -1,5 +1,28 @@
-import { NavLink, Outlet } from 'react-router'
+import { useEffect } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { tripInProgress } from '../lib/today'
+import { useCurrentTrip } from '../lib/trip'
 import { HealthBadge } from './HealthBadge'
+
+const OPENED_KEY = 'dongseon.opened'
+
+/** During the trip the app opens on 오늘 (once per browser tab, so 홈 stays reachable). */
+function useTodayFirst() {
+  const { trip } = useCurrentTrip()
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (!trip) return
+    let opened = true
+    try {
+      opened = window.sessionStorage.getItem(OPENED_KEY) === '1'
+      window.sessionStorage.setItem(OPENED_KEY, '1')
+    } catch {
+      opened = true
+    }
+    if (!opened && pathname === '/' && tripInProgress(trip)) navigate('/today', { replace: true })
+  }, [trip, pathname, navigate])
+}
 
 /** Every screen, in desktop header order. */
 const NAV = [
@@ -26,6 +49,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   isActive ? 'font-semibold text-teal-700' : 'text-gray-600 hover:text-gray-900'
 
 export function Layout() {
+  useTodayFirst()
   return (
     <div className="flex min-h-dvh flex-col bg-gray-50 pb-16 text-gray-900 tabular-nums md:h-dvh md:pb-0">
       <header className="hidden shrink-0 items-center gap-6 border-b border-gray-200 bg-white px-6 py-3 md:flex">

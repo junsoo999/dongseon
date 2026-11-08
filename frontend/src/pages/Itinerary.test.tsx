@@ -153,6 +153,58 @@ describe('Itinerary', () => {
     expect(screen.getByText('지도 1곳')).toBeInTheDocument()
   })
 
+  it('shows weather per day, highlights a rainy day and the changed-hours alert', async () => {
+    const fetch = mockApi([
+      [
+        '/weather',
+        {
+          days: [
+            {
+              date: '2030-12-28',
+              kind: 'forecast',
+              code: 61,
+              tmax: 11.2,
+              tmin: 3.8,
+              precip_mm: 5,
+              precip_prob: 80,
+              rainy: true,
+              years: null,
+              fetched_at: '2030-12-27T00:00:00Z',
+            },
+          ],
+          rain_probability_pct: 60,
+          attribution: 'Weather data by Open-Meteo.com',
+          attribution_url: 'https://open-meteo.com/',
+        },
+      ],
+      ['/alerts/3/dismiss', null],
+      [
+        '/alerts',
+        [
+          {
+            id: 3,
+            kind: 'hours_changed',
+            itinerary_id: 5,
+            added: ['박물관: 이 날은 휴무입니다'],
+            resolved: [],
+            created_at: '2030-12-21T00:00:00Z',
+          },
+        ],
+      ],
+      ['/itineraries/active', itinerary],
+      ['/api/trips', [trip]],
+    ])
+    renderPage()
+    expect(await screen.findByText('🌧️ 비 · 4°/11° · 강수 80%')).toBeInTheDocument()
+    expect(screen.getByText('Weather data by Open-Meteo.com')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '☔ 비 예보 · 대안 만들기' })).toBeInTheDocument()
+    expect(await screen.findByText('⚠️ 박물관: 이 날은 휴무입니다')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '닫기' }))
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith('/api/alerts/3/dismiss', expect.anything()),
+    )
+  })
+
   it('shows AI review notes and edits, previews one and accepts it as a new version', async () => {
     const edit = (id: number, applicable: boolean, extra = {}) => ({
       id,

@@ -144,6 +144,13 @@ class HoursCache:
         self._clock = clock
         self._rows: dict[str, tuple[float, GoogleHours]] = {}
 
+    def peek(self, place_id: str) -> GoogleHours | None:
+        """Return cached hours without fetching, or ``None`` when absent or expired."""
+        hit = self._rows.get(place_id)
+        if hit and self._clock() - hit[0] < self._ttl:
+            return hit[1]
+        return None
+
     def get(self, place_id: str, fetch: Callable[[str], dict]) -> GoogleHours:
         """Return cached hours or fetch and parse them."""
         now = self._clock()

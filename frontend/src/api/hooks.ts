@@ -16,6 +16,9 @@ import {
   type StayOut,
   type StayPatch,
   type FxOut,
+  type TodayOut,
+  type WeatherListOut,
+  type AlertOut,
   type AirportOut,
   type FlightIn,
   type FlightOut,
@@ -251,7 +254,14 @@ export function useDeleteFlight(tripId: number | null) {
 }
 
 export type JobName =
-  'places-resolve' | 'scout' | 'prices' | 'review' | 'hours-research' | 'area-notes'
+  | 'places-resolve'
+  | 'scout'
+  | 'prices'
+  | 'review'
+  | 'hours-research'
+  | 'area-notes'
+  | 'weather'
+  | 'hours-refresh'
 
 /** A background job's state; polls every 5 s while it runs. */
 export function useJob(name: JobName) {
@@ -369,6 +379,8 @@ function useNewVersion<V>(tripId: number | null, send: (v: V) => Promise<Itinera
       qc.setQueryData(['itinerary', tripId], data)
       void qc.invalidateQueries({ queryKey: ['itineraryVersions', tripId] })
       void qc.invalidateQueries({ queryKey: ['usage'] })
+      void qc.invalidateQueries({ queryKey: ['alerts', tripId] })
+      void qc.invalidateQueries({ queryKey: ['today', tripId] })
     },
   })
 }
@@ -513,5 +525,41 @@ export function useParseBooking(tripId: number | null) {
   return useMutation({
     mutationFn: (text: string) =>
       apiSend<BookingOut>('POST', `/trips/${tripId}/parse-booking`, { text }),
+  })
+}
+
+/** The today tab: today's day during the trip (the first day before it), weather and the JPY rate. */
+export function useToday(tripId: number | null) {
+  return useQuery({
+    queryKey: ['today', tripId],
+    queryFn: () => apiGet<TodayOut>(`/trips/${tripId}/today`),
+    enabled: tripId !== null,
+    refetchInterval: 10 * 60_000,
+  })
+}
+
+/** Stored weather per trip date (forecast, else past-years climate). */
+export function useTripWeather(tripId: number | null) {
+  return useQuery({
+    queryKey: ['weather', tripId],
+    queryFn: () => apiGet<WeatherListOut>(`/trips/${tripId}/weather`),
+    enabled: tripId !== null,
+  })
+}
+
+/** Open alerts about the active version (e.g. warnings changed by the D-7 hours re-check). */
+export function useAlerts(tripId: number | null) {
+  return useQuery({
+    queryKey: ['alerts', tripId],
+    queryFn: () => apiGet<AlertOut[]>(`/trips/${tripId}/alerts`),
+    enabled: tripId !== null,
+  })
+}
+
+export function useDismissAlert(tripId: number | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => apiSend<null>('POST', `/alerts/${id}/dismiss`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['alerts', tripId] }),
   })
 }

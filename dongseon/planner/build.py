@@ -26,7 +26,7 @@ from dongseon.db.models import FlightOption, HoursOverride, Itinerary, Itinerary
 from dongseon.flights.evaluate import LegTimes, evaluate
 from dongseon.matrix.approx import approx_leg
 from dongseon.places.service import coords_for
-from dongseon.planner.hours import HOURS_CACHE, DayHours, GoogleHours, OverrideRow, hours_on
+from dongseon.planner.hours import HOURS_CACHE, DayHours, GoogleHours, OverrideRow, google_weekday, hours_on
 from dongseon.planner.solver import DAY_MIN, Day, Stop, Visit, schedule, solve
 from dongseon.sources.google_places import GooglePlacesClient, LatLng, PlaceNotFoundError, PlacesError
 
@@ -63,21 +63,47 @@ def _stay_point(stay: Stay, coords: dict[str, LatLng]) -> LatLng | None:
     return coords.get(gid) if gid else None
 
 
+SOURCE_LABELS = {
+    "user": "직접 입력",
+    "google_special": "Google 특별 영업",
+    "ai_research": "AI 조사",
+    "google_regular": "Google",
+    "none": "",
+}
+GOOGLE_SOURCES = ("google_special", "google_regular")
+
+
+def windows_text(windows: list[tuple[int, int]]) -> str:
+    """Format windows as "10:00~18:00, 19:00~22:00"."""
+    return ", ".join(f"{a // 60:02d}:{a % 60:02d}~{(b // 60) % 24:02d}:{b % 60:02d}" for a, b in windows)
+
+
 def hours_label(h: DayHours) -> str:
     """Short Korean label, e.g. "10:00~18:00 · Google", "휴무 · 직접 입력", "영업시간 정보 없음"."""
-    src = {
-        "user": "직접 입력",
-        "google_special": "Google 특별 영업",
-        "ai_research": "AI 조사",
-        "google_regular": "Google",
-        "none": "",
-    }[h.source]
+    src = SOURCE_LABELS[h.source]
     if h.status == "closed":
         return f"휴무 · {src}"
     if h.status == "unknown":
         return "영업시간 정보 없음"
-    text = ", ".join(f"{a // 60:02d}:{a % 60:02d}~{(b // 60) % 24:02d}:{b % 60:02d}" for a, b in h.windows)
-    return f"{text} · {src}"
+    return f"{windows_text(h.windows)} · {src}"
+
+
+def stored_hours_label(h: DayHours) -> str:
+    """The label saved with a version: Google times are never stored, only that Google was the source."""
+    if h.source in GOOGLE_SOURCES and h.status == "open":
+        return SOURCE_LABELS[h.source]
+    return hours_label(h)
+
+
+def live_hours_label(label: str | None, source: str | None, place_id: str | None, d: date) -> str | None:
+    """Fill a stored Google label with today's times from process memory, if they are still cached there."""
+    if source not in GOOGLE_SOURCES or not place_id or label != SOURCE_LABELS.get(source or ""):
+        return label
+    google = HOURS_CACHE.peek(place_id)
+    if google is None:
+        return label
+    windows = google.dated.get(d) if source == "google_special" else google.weekly.get(google_weekday(d))
+    return f"{windows_text(windows)} · {label}" if windows else label
 
 
 @dataclass(frozen=True)
@@ -438,7 +464,7 @@ def _store(
                     warnings_json=json.dumps(
                         {
                             "warnings": _visit_warnings(ctx, i, pin, v, h),
-                            "hours": hours_label(h) if h else None,
+                            "hours": stored_hours_label(h) if h else None,
                             "hours_source": h.source if h else None,
                             "hours_url": h.source_url if h else None,
                         },
