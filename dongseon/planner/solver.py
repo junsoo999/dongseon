@@ -24,12 +24,28 @@ Window = tuple[int, int]  # local minutes on that day
 
 @dataclass(frozen=True)
 class Day:
-    """One trip day: its usable window (local minutes) and where it starts and ends."""
+    """One trip day: its usable window (local minutes) and where it starts and ends.
+
+    The day starts and ends at ``depot`` (the night's stay) unless ``start_point`` / ``end_point`` say otherwise
+    (e.g. the airport on the arrival or departure day); the window is then measured at those points.
+    """
 
     index: int
     start_min: int
     end_min: int
     depot: object  # anything the travel function understands (e.g. a LatLng)
+    start_point: object | None = None
+    end_point: object | None = None
+
+    @property
+    def origin(self) -> object:
+        """Where the day starts."""
+        return self.depot if self.start_point is None else self.start_point
+
+    @property
+    def finish(self) -> object:
+        """Where the day ends."""
+        return self.depot if self.end_point is None else self.end_point
 
 
 @dataclass(frozen=True)
@@ -91,10 +107,10 @@ def schedule(
     arrival and is marked ``in_window=False``. Late finishes are not cut: the validator reports them.
 
     Returns:
-        The visits in absolute trip minutes and (arrival back at the stay, minutes of that move).
+        The visits in absolute trip minutes and (arrival at the day's end point, minutes of that move).
     """
     t = day.start_min
-    prev = day.depot
+    prev = day.origin
     visits: list[Visit] = []
     for s in stops:
         m = 0 if s.point is prev else int(travel(prev, s.point))
@@ -116,7 +132,7 @@ def schedule(
             )
         )
         t, prev = start + s.dwell_min, s.point
-    back = 0 if prev is day.depot else int(travel(prev, day.depot))
+    back = 0 if prev is day.finish else int(travel(prev, day.finish))
     return visits, (_abs(day.index, t + back), back)
 
 
@@ -148,11 +164,11 @@ def solve(
     for d in days:
         starts.append(len(nodes))
         nodes.append(("start", d.index, d.index))
-        points.append(d.depot)
+        points.append(d.origin)
         service.append(0)
         ends.append(len(nodes))
         nodes.append(("end", d.index, d.index))
-        points.append(d.depot)
+        points.append(d.finish)
         service.append(0)
     copies: dict[int, list[tuple[int, list[Window]]]] = {}
     by_key = {s.key: s for s in stops}

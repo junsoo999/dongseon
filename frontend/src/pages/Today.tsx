@@ -256,9 +256,10 @@ export function Today() {
           {next && <StopCard stop={itemCard(next)} tag="다음" strong={!current} />}
           {done && (
             <p className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-600">
-              오늘 일정을 모두 마쳤습니다. {t.day.depot}(으)로 돌아가는 시각은{' '}
-              {t.day.back_at ?? '-'}
-              (예상)입니다.
+              오늘 일정을 모두 마쳤습니다.{' '}
+              {t.day.end_place
+                ? `${t.day.end_place} 도착 예상 시각은 ${t.day.back_at ?? '-'}입니다.`
+                : `${t.day.depot}(으)로 돌아가는 시각은 ${t.day.back_at ?? '-'}(예상)입니다.`}
             </p>
           )}
         </>

@@ -9,6 +9,7 @@ import {
   usePatchChecklistItem,
   useSeedChecklist,
 } from '../api/hooks'
+import { LocalNames } from '../components/LocalNames'
 import { Page } from '../components/MapLayout'
 import { dayLabel } from '../lib/airlines'
 import { formatLocal, formatMoney } from '../lib/format'
@@ -252,6 +253,7 @@ function ExportSection({ bundle }: { bundle: OfflineOut }) {
             일정에서 초안 만들기
           </Link>
         </p>
+        <LocalNames tripId={bundle.trip.id} />
       </section>
     )
   }
@@ -270,6 +272,7 @@ function ExportSection({ bundle }: { bundle: OfflineOut }) {
           google.com/maps/d에서 새 지도 → 레이어마다 가져오기 → 위치 열은 '위치', 제목은 '이름'.
           현지 이름을 넣은 장소가 더 정확히 찾아집니다.
         </p>
+        <LocalNames tripId={bundle.trip.id} />
         <div className="grid grid-cols-2 gap-2">
           <a href={`/api/itineraries/${id}/export.ics`} className={BTN.secondary}>
             캘린더 (ICS)

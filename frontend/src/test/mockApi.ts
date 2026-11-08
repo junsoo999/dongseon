@@ -17,6 +17,7 @@ const DEFAULTS: Array<[string, unknown]> = [
   ['/alerts', []],
   ['/checklist', { items: [], template_as_of: '2026-11-08' }],
   ['/bookings', { flights: [], stays: [], reservations: [] }],
+  ['/local-names', { total: 0, filled: 0, suggestions: [] }],
   [
     '/offline',
     {

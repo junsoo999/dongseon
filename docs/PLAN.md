@@ -435,6 +435,7 @@ uv run --no-sync dongseon serve
 | GET/POST | `/api/trips/{id}/flights` | 항공 후보와 평가 |
 | POST | `/api/trips/{id}/parse-booking` | 예약 메일 파싱 (AI, 가림 후, 저장 안 함, 초안만 반환) |
 | GET | `/api/trips/{id}/hours-research`, `/api/trips/{id}/area-notes` | 연휴 영업시간 AI 조사 결과, 동네 메모 |
+| GET/POST | `/api/trips/{id}/local-names`, `/api/trips/{id}/local-names/accept-verified`, `/api/local-names/{id}/accept`, `/api/local-names/{id}/reject` | 현지 이름 AI 제안 (IDs Only 검색으로 확인), 하나씩 또는 확인된 것 모두 적용 |
 | POST | `/api/trips/{id}/itineraries/solve` | 초안 생성 (잠금 반영) |
 | GET/PATCH | `/api/itineraries/{id}` | 일정 조회와 편집 |
 | POST | `/api/itineraries/{id}/review` | AI 검토(또는 `rain_date`의 비 오는 날 대안) 백그라운드 시작 |
@@ -469,6 +470,7 @@ uv run --no-sync dongseon serve
 | M3 | (M3a: 영업시간·연휴, OR-Tools solver(날짜별 복사본 + 하루 분량 균형), 경고, 버전 저장, 타임라인·날짜별 지도·길찾기 / M3b: 편집(순서·날짜 옮기기·빼기·넣기, 옮긴 곳 자동 잠금)·잠금 유지 다시 맞추기·버전 비교와 되돌리기·영업시간 직접 입력. Google 도보 확인은 서버 키의 Routes API 권한이 생기면 붙임) 일정: 날짜별 영업 시간창, OR-Tools solver, validator, 타임라인·날짜별 지도, 드래그·잠금·다시 맞추기, 버전, Google Maps 딥링크 | 5일 일정 초안이 경고와 함께 나오고 편집 후 다시 맞추기가 동작 |
 | M4 | (M4a: AI 일정 검토·비 오는 날 대안 — 제안마다 그대로 시각 계산 후 경고가 늘면 바뀌는 날만 다시 맞춤, 미리보기 diff, 수락 시 새 버전. 비 오는 날은 날짜별 버튼으로 시작하고 M5에서 예보와 연결 / M4b: 연휴 영업시간 AI 조사(출처·확신도 있는 날짜만 저장), 동네 메모, 예약 메일 붙여넣기(가림 후 읽어 항공·숙소 입력 화면을 채움, 원문 저장 안 함)) AI: plan_review, rain_plan, hours_research, stay_area_notes, booking_parse (claude_cli·맛집 조사·수락 흐름은 M2.5에서 먼저 함) | AI 제안이 재solve와 검증을 거쳐 diff로 보이고 수락하면 새 버전이 생김 |
 | M5 | (M5a: 오늘 탭(지금·다음 일정, 길찾기, 환율 계산), Open-Meteo 날씨(16일 이내 예보, 그 뒤는 지난 5년 평년값), D-7부터 Google 특별 영업시간으로 현재 일정을 다시 검사해 경고가 바뀌면 홈·일정·오늘에 알림(경고 문구만 저장), 비 예보 날짜는 daily가 비 오는 날 대안을 미리 만듦, 저장된 일정에서 Google 영업시각 제거 / M5b: 준비 탭(체크리스트 템플릿, 확정 항공·숙소·예약 시각 모음), ICS·인쇄·날짜별 Google 내 지도 CSV zip·날짜별 경로 링크 내보내기(영업시간·좌표 없음, 장소의 현지 이름은 사용자 데이터), 휴대폰 IndexedDB 오프라인 사본과 앱 껍데기만 담는 직접 작성한 service worker, README 출발 전 점검) 여행 모드: 오늘 화면, 날씨·환율, D-7 영업시간 갱신, `daily`와 launchd, `serve` 상시 실행, 원격 접속, PWA 오프라인, ICS·인쇄 내보내기, 체크리스트 | 휴대폰 데이터망으로 원격 도메인에서 오늘 일정과 길찾기가 열리고, 비행기 모드에서도 일정을 읽을 수 있음 |
+| M5+ | 현지 이름 AI 조사(사용자 이름·분류·메모만 보내고 IDs Only 무료 검색으로 같은 장소인지 확인, 제안만 저장), 공항 `zone_km` 안의 장소는 그 공항에 도착·출발하는 날에만 넣고 그날 동선을 공항에서 시작·끝냄 | 내보낸 내 지도에서 장소가 현지 이름으로 찾아지고, 공항 안 가게가 출국일 마지막 일정이 됨 |
 | M6 | (선택) Google Takeout "저장됨" 가져오기(2026-11-05 사용자 요청으로 M1에서 이동), 여행 중 지출 기록, 여행 후 회고(실제 방문 체크, 체류시간 보정), 항공·숙소 가격 adapter, 다른 도시 config | 사용자와 범위를 합의한 뒤 |
 
 ---

@@ -49,7 +49,9 @@ class DayOut(BaseModel):
     start: str
     end: str
     depot: str
-    back_at: str | None
+    start_place: str | None = None  # where the day starts when not the stay (the arrival airport)
+    end_place: str | None = None  # where the day ends when not the stay (the departure airport)
+    back_at: str | None  # arrival at the end place (the stay unless end_place says otherwise)
     back_move_min: int | None
     warnings: list[str]
     items: list[ItemOut]
@@ -137,6 +139,8 @@ def itinerary_out(it: Itinerary, trip: Trip, session: SessionDep) -> ItineraryOu
                 start=_hhmm(info["start_min"]),
                 end=_hhmm(info["end_min"]),
                 depot=info["depot"],
+                start_place=info.get("start_place"),
+                end_place=info.get("end_place"),
                 back_at=_hhmm(back) if back is not None else None,
                 back_move_min=info.get("return_move_min"),
                 warnings=info.get("warnings") or [],

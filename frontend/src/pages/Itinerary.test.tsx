@@ -153,6 +153,18 @@ describe('Itinerary', () => {
     expect(screen.getByText('지도 1곳')).toBeInTheDocument()
   })
 
+  it('ends a departure day at the airport when a pin next to it is planned last', async () => {
+    const day = { ...itinerary.days[0], end_place: '나리타 공항', back_at: '15:59', end: '16:00' }
+    mockApi([
+      ['/itineraries/active', { ...itinerary, days: [day] }],
+      ['/api/trips', [trip]],
+    ])
+    renderPage()
+    expect(await screen.findByText('나리타 공항 도착 (늦어도 16:00)')).toBeInTheDocument()
+    expect(screen.getByText('숙소에서 출발')).toBeInTheDocument()
+    expect(screen.getByText('✈️')).toBeInTheDocument()
+  })
+
   it('shows weather per day, highlights a rainy day and the changed-hours alert', async () => {
     const fetch = mockApi([
       [

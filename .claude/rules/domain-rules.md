@@ -103,6 +103,11 @@ alwaysApply: true
   `extended_swap_active` and `relocate_and_make_active` must stay on, or visits never move between days.
 - Python 9.15 bindings: `SetAllowedVehiclesForIndex` takes no list; restrict days with `VehicleVar(idx).SetValues`.
   pytest must ignore the SWIG `builtin type ... has no __module__` DeprecationWarning (as errors it crashes import).
+- Airport days: pins within an airport's `zone_km` (city YAML, default 3 km) are only planned on the booked
+  flight's arrival day (when it lands there) or departure day (when it leaves from there). That day then starts or
+  ends at the airport (`Day.start_point` / `end_point`, `AirportPoint` in `planner/build.py`): the window moves by
+  the airport access minutes and travel to the airport uses its express links. Without such a day they are planned
+  like any other pin. A version's day stats carry `start_place` / `end_place` for the screens.
 - Locked visits (`itinerary_items.locked`) keep their date and order on a re-solve: one copy on that day,
   `LOCK_PENALTY`, and cumul precedence constraints. Pins the user removed stay out (`solver_stats_json.excluded`).
 - Every version is timed by `solver.schedule()` (earliest start along the order) and checked in
@@ -150,6 +155,11 @@ alwaysApply: true
   with the source link.
 - Stay area notes (`dongseon/llm/area_notes.py`, `dongseon area-notes`): `ai_suggestions` kind `area_note`, one per
   configured area label, sources required.
+- Local names (`dongseon/llm/local_names.py`, `dongseon local-names`, job lock `local-names`): pins with a place ID
+  and no `local_name`, in batches of 10, from the user's label, category and both notes only. Each name is checked
+  with the free IDs Only search ("verified" when the place's own ID comes back). Stored as `ai_suggestions` kind
+  `local_name` (key = place id); low confidence or uncited names are dropped, rejected names are sent back. The
+  user applies one, or all verified ones at once; applying never overwrites a typed local name.
 - Booking emails (`dongseon/llm/booking.py`, `POST /trips/{id}/parse-booking`): mask card numbers (Luhn), passport
   numbers, birth dates, emails and phone numbers before the call (no tools); the text is never stored and the result
   is only a draft the user confirms in the flight or stay form.

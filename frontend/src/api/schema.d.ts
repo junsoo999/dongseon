@@ -1152,6 +1152,86 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/trips/{trip_id}/local-names': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Local Names
+     * @description Local name coverage and pending AI suggestions (verified first).
+     */
+    get: operations['local_names_api_trips__trip_id__local_names_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/local-names/{suggestion_id}/accept': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Accept Local Name
+     * @description Apply one suggested local name.
+     */
+    post: operations['accept_local_name_api_local_names__suggestion_id__accept_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/local-names/{suggestion_id}/reject': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Reject Local Name
+     * @description Reject a suggested name; later research will not propose it again.
+     */
+    post: operations['reject_local_name_api_local_names__suggestion_id__reject_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/trips/{trip_id}/local-names/accept-verified': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Accept Verified
+     * @description Apply every pending name the search confirmed.
+     */
+    post: operations['accept_verified_api_trips__trip_id__local_names_accept_verified_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/jobs/{name}': {
     parameters: {
       query?: never
@@ -1260,6 +1340,14 @@ export interface components {
        * Format: date-time
        */
       created_at: string
+    }
+    /**
+     * AppliedOut
+     * @description How many names were applied.
+     */
+    AppliedOut: {
+      /** Applied */
+      applied: number
     }
     /**
      * AreaLinksOut
@@ -1531,6 +1619,10 @@ export interface components {
       end: string
       /** Depot */
       depot: string
+      /** Start Place */
+      start_place?: string | null
+      /** End Place */
+      end_place?: string | null
       /** Back At */
       back_at: string | null
       /** Back Move Min */
@@ -2154,6 +2246,43 @@ export interface components {
       label: string
       /** Url */
       url: string
+    }
+    /**
+     * LocalNameOut
+     * @description A pending local name for a pin ("AI 제안").
+     */
+    LocalNameOut: {
+      /** Id */
+      id: number
+      /** Pin Id */
+      pin_id: number
+      /** Label */
+      label: string
+      /** Name Local */
+      name_local: string
+      /** Sources */
+      sources: components['schemas']['Source'][]
+      /** Confidence */
+      confidence: string
+      /** Verified */
+      verified: boolean
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+    }
+    /**
+     * LocalNamesOut
+     * @description How many pins have a local name, and the pending suggestions.
+     */
+    LocalNamesOut: {
+      /** Total */
+      total: number
+      /** Filled */
+      filled: number
+      /** Suggestions */
+      suggestions: components['schemas']['LocalNameOut'][]
     }
     /**
      * OfflineDayOut
@@ -5124,6 +5253,126 @@ export interface operations {
       }
     }
   }
+  local_names_api_trips__trip_id__local_names_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['LocalNamesOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  accept_local_name_api_local_names__suggestion_id__accept_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        suggestion_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  reject_local_name_api_local_names__suggestion_id__reject_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        suggestion_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  accept_verified_api_trips__trip_id__local_names_accept_verified_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        trip_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AppliedOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   job_status_api_jobs__name__get: {
     parameters: {
       query?: never
@@ -5138,6 +5387,7 @@ export interface operations {
           | 'area-notes'
           | 'weather'
           | 'hours-refresh'
+          | 'local-names'
       }
       cookie?: never
     }
@@ -5177,6 +5427,7 @@ export interface operations {
           | 'area-notes'
           | 'weather'
           | 'hours-refresh'
+          | 'local-names'
       }
       cookie?: never
     }

@@ -11,14 +11,14 @@ from sqlalchemy.orm import Session
 from dongseon.api.deps import DefaultsDep, HttpDep, ProfileDep, SessionDep, SettingsDep
 from dongseon.api.routes.places import OptionalPlacesDep
 from dongseon.api.routes.trips import get_trip_or_404
-from dongseon.core.cities import CityNotFoundError, load_city
+from dongseon.core.cities import CityConfig, CityNotFoundError, load_city
 from dongseon.core.config import Settings
 from dongseon.core.profile import Profile
 from dongseon.db.models import GeoCache, Place, Stay, Trip
 from dongseon.places.service import coords_for, get_or_create_place, store_geo
 from dongseon.sources.fx import SOURCE_LABEL, Rate, get_rate
 from dongseon.sources.google_places import GooglePlacesClient, LatLng, PlaceNotFoundError
-from dongseon.stays.areas import ensure_area_places
+from dongseon.stays.areas import AreaRef, ensure_area_places
 from dongseon.stays.score import AirportAccess, Target, score_origin
 
 router = APIRouter(tags=["stays"])
@@ -283,6 +283,29 @@ def score(
     return build_score(get_trip_or_404(session, trip_id), session, settings, profile, http, client)
 
 
+def _airports(city: CityConfig, areas: list[AreaRef], coords: dict[str, LatLng]) -> dict[str, AirportAccess]:
+    hubs = {a.key: coords[a.google_place_id] for a in areas if a.kind == "hub" and a.google_place_id in coords}
+    airports: dict[str, AirportAccess] = {}
+    for cfg in city.airports:
+        ref = next((a for a in areas if a.kind == "airport" and a.key == cfg.code), None)
+        if ref is None or ref.google_place_id not in coords:
+            continue
+        express = [
+            (hubs[f"{cfg.code}:{x.hub_label}"], x.ride_min) for x in cfg.express if f"{cfg.code}:{x.hub_label}" in hubs
+        ]
+        airports[cfg.code] = AirportAccess(point=coords[ref.google_place_id], express=express)
+    return airports
+
+
+def airport_accesses(
+    session: Session, client: GooglePlacesClient | None, city: CityConfig
+) -> dict[str, AirportAccess]:
+    """Each configured airport's location and express links (airports not found are left out)."""
+    areas = ensure_area_places(session, client, city)
+    coords = coords_for(session, client, [a.google_place_id for a in areas if a.google_place_id])
+    return _airports(city, areas, coords)
+
+
 def build_score(
     trip: Trip,
     session: Session,
@@ -311,16 +334,7 @@ def build_score(
         for p in pins
         if (gid := p.place.google_place_id) and gid in coords
     ]
-    hubs = {a.key: coords[a.google_place_id] for a in areas if a.kind == "hub" and a.google_place_id in coords}
-    airports: dict[str, AirportAccess] = {}
-    for cfg in city.airports:
-        ref = next((a for a in areas if a.kind == "airport" and a.key == cfg.code), None)
-        if ref is None or ref.google_place_id not in coords:
-            continue
-        express = [
-            (hubs[f"{cfg.code}:{x.hub_label}"], x.ride_min) for x in cfg.express if f"{cfg.code}:{x.hub_label}" in hubs
-        ]
-        airports[cfg.code] = AirportAccess(point=coords[ref.google_place_id], express=express)
+    airports = _airports(city, areas, coords)
     emojis = {a.label: a.emoji for a in city.stay_areas}
     origins: list[OriginOut] = []
     for a in areas:
