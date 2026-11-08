@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     defaults_path: str = "config/defaults.yaml"
     cities_dir: str = "config/cities"
     airports_path: str = "config/airports.yaml"
+    checklist_path: str = "config/checklist.yaml"
     lock_dir: str = "data/locks"
 
     google_maps_server_key: str = ""
@@ -93,6 +94,11 @@ class Settings(BaseSettings):
     def airports_file(self) -> Path:
         """Absolute path of the airport list."""
         return resolve_repo_path(self.airports_path)
+
+    @property
+    def checklist_file(self) -> Path:
+        """Absolute path of the preparation checklist template."""
+        return resolve_repo_path(self.checklist_path)
 
     @property
     def configured_keys(self) -> dict[str, bool]:

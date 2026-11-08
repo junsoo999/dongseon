@@ -52,6 +52,14 @@ alwaysApply: true
 - LLM input: user data plus code-computed abstract flags only. Never send Google-derived opening times, travel
   minutes, names, addresses or coordinates. Build every LLM payload in `dongseon/llm/payloads.py` only.
 - Offline cache: user data, `place_id`, coordinates ≤ 30 days, planned order and times, Maps URLs deep links. No map tiles.
+  The phone's copy is `GET /api/trips/{id}/offline` (built by `dongseon/export/plan.py`) kept in IndexedDB; it
+  carries no opening hours, travel minutes or coordinates. The service worker (`frontend/public/sw.js`) caches only
+  the app shell and never `/api/` or cross-origin responses.
+- Exports (`dongseon/export/`: ICS, print HTML, My Maps CSV zip) hold the plan's order and times, the user's labels,
+  local names and notes, warning text and Maps URLs deep links only: no Google hours, travel minutes or coordinates.
+  My Maps geocodes rows by the "위치" text (local name, else label, plus the city). `places.local_name` is user data
+  (typed by the user, or the accepted AI research's `name_local`), never Google's `displayName`. "동네" is the nearest
+  configured stay area (city YAML) within 2.5 km.
 - Maps: Google Maps JavaScript API only; never show Google content on or near a non-Google map.
 - Attribution: Google content shown without a Google map carries the Google Maps logo (or `Google Maps` text) in the
   same container, plus any `attributions[]` providers.
@@ -82,6 +90,9 @@ alwaysApply: true
 - `hours-refresh` re-times the active version as it is with today's hours (no re-solve, no new version) and stores
   only the changed warning text as a `trip_alerts` row (`hours_changed`); the same finding is not stored twice, so a
   dismissed alert stays dismissed. Alerts about older versions are not shown.
+- Prep tab: the checklist template is `config/checklist.yaml` (facts that change link to the official page with
+  `as_of`); seeding copies lines the trip lacks (by text). Bookings are booked flights and stays plus pins with a
+  reserved time.
 - A day is rainy when the forecast precipitation probability is at least `trip_mode.rain_probability_pct`; climate
   figures never count. `rain-plans` runs the rain plan for each upcoming rainy date (job lock `review`).
 

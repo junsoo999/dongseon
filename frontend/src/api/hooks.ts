@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
+import { isUnreachable, loadBundle, saveBundle } from '../lib/offline'
 import {
   apiGet,
   apiSend,
@@ -19,6 +20,12 @@ import {
   type TodayOut,
   type WeatherListOut,
   type AlertOut,
+  type BookingsOut,
+  type ChecklistIn,
+  type ChecklistItemOut,
+  type ChecklistOut,
+  type ChecklistPatch,
+  type OfflineOut,
   type AirportOut,
   type FlightIn,
   type FlightOut,
@@ -381,6 +388,7 @@ function useNewVersion<V>(tripId: number | null, send: (v: V) => Promise<Itinera
       void qc.invalidateQueries({ queryKey: ['usage'] })
       void qc.invalidateQueries({ queryKey: ['alerts', tripId] })
       void qc.invalidateQueries({ queryKey: ['today', tripId] })
+      void qc.invalidateQueries({ queryKey: ['offline', tripId] })
     },
   })
 }
@@ -561,5 +569,83 @@ export function useDismissAlert(tripId: number | null) {
   return useMutation({
     mutationFn: (id: number) => apiSend<null>('POST', `/alerts/${id}/dismiss`),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['alerts', tripId] }),
+  })
+}
+
+export function useChecklist(tripId: number | null) {
+  return useQuery({
+    queryKey: ['checklist', tripId],
+    queryFn: () => apiGet<ChecklistOut>(`/trips/${tripId}/checklist`),
+    enabled: tripId !== null,
+  })
+}
+
+function useChecklistMutation<V, R>(tripId: number | null, send: (v: V) => Promise<R>) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: send,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['checklist', tripId] })
+      void qc.invalidateQueries({ queryKey: ['offline', tripId] })
+    },
+  })
+}
+
+/** Copy the template lines the trip does not have yet. */
+export function useSeedChecklist(tripId: number | null) {
+  return useChecklistMutation(tripId, () =>
+    apiSend<ChecklistOut>('POST', `/trips/${tripId}/checklist/seed`),
+  )
+}
+
+export function useAddChecklistItem(tripId: number | null) {
+  return useChecklistMutation(tripId, (body: ChecklistIn) =>
+    apiSend<ChecklistItemOut>('POST', `/trips/${tripId}/checklist`, body),
+  )
+}
+
+export function usePatchChecklistItem(tripId: number | null) {
+  return useChecklistMutation(tripId, ({ id, ...body }: ChecklistPatch & { id: number }) =>
+    apiSend<ChecklistItemOut>('PATCH', `/checklist/${id}`, body),
+  )
+}
+
+export function useDeleteChecklistItem(tripId: number | null) {
+  return useChecklistMutation(tripId, (id: number) => apiSend<null>('DELETE', `/checklist/${id}`))
+}
+
+/** Booked flights, booked stays and reserved time slots. */
+export function useBookings(tripId: number | null) {
+  return useQuery({
+    queryKey: ['bookings', tripId],
+    queryFn: () => apiGet<BookingsOut>(`/trips/${tripId}/bookings`),
+    enabled: tripId !== null,
+  })
+}
+
+export type OfflineState = { bundle: OfflineOut | null; live: boolean }
+
+/**
+ * The phone's offline copy: fetched and stored whenever the server answers, read back from IndexedDB when
+ * it cannot be reached. With no trip id (the trip list did not load), the latest stored copy is used.
+ */
+export function useOfflineBundle(tripId: number | null, fallbackLatest = false) {
+  return useQuery({
+    queryKey: ['offline', tripId],
+    queryFn: async (): Promise<OfflineState> => {
+      if (tripId !== null) {
+        try {
+          const bundle = await apiGet<OfflineOut>(`/trips/${tripId}/offline`)
+          await saveBundle(bundle)
+          return { bundle, live: true }
+        } catch (e) {
+          if (!isUnreachable(e)) throw e
+        }
+      }
+      return { bundle: await loadBundle(tripId), live: false }
+    },
+    enabled: tripId !== null || fallbackLatest,
+    refetchInterval: 10 * 60_000,
+    retry: false,
   })
 }

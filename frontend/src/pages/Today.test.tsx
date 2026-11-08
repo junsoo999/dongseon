@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { _clearMemory, saveBundle } from '../lib/offline'
 import { mockApi } from '../test/mockApi'
 import { Today } from './Today'
 
@@ -126,5 +127,62 @@ describe('Today', () => {
     expect(await screen.findByText('출발까지 D-8')).toBeInTheDocument()
     expect(screen.getByText(/첫날 미리보기/)).toBeInTheDocument()
     expect(screen.queryByText(/^지금 ·/)).not.toBeInTheDocument()
+  })
+
+  it('shows the saved plan with now and next when the home Mac cannot be reached', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2030-12-28T01:30:00Z')) // 10:30 in Tokyo
+    const s = (seq: number, label: string, start: string, end: string) => ({
+      seq,
+      start,
+      end,
+      label,
+      local_name: null,
+      area: null,
+      note: null,
+      google_place_id: `g${seq}`,
+      directions_url: `https://www.google.com/maps/dir/?api=1&destination=${seq}`,
+      warnings: [],
+    })
+    await saveBundle({
+      trip: {
+        id: 1,
+        title: '도쿄',
+        timezone: 'Asia/Tokyo',
+        start_date: '2030-12-28',
+        end_date: '2030-12-29',
+      },
+      generated_at: '2030-12-27T00:00:00Z',
+      itinerary_id: 5,
+      version: 2,
+      days: [
+        {
+          date: '2030-12-28',
+          depot: '숙소',
+          route_urls: [],
+          stops: [s(1, '박물관', '10:00', '12:00'), s(2, '시장', '13:00', '14:00')],
+        },
+        {
+          date: '2030-12-29',
+          depot: '숙소',
+          route_urls: [],
+          stops: [s(3, '공원', '10:00', '11:00')],
+        },
+      ],
+      checklist: [],
+      bookings: { flights: [], stays: [], reservations: [] },
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))),
+    )
+    renderPage()
+    expect(await screen.findByText('오늘 · 저장된 일정')).toBeInTheDocument()
+    expect(screen.getByText('지금 · 10:00~12:00')).toBeInTheDocument()
+    expect(screen.getByText('다음 · 13:00~14:00')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: /12\/29/ }))
+    expect(screen.getByText('공원')).toBeInTheDocument()
+    expect(screen.queryByText(/^지금 ·/)).not.toBeInTheDocument()
+    _clearMemory()
   })
 })

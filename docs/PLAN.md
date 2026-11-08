@@ -205,7 +205,7 @@ dongseon/
 | 테이블 | 주요 컬럼 |
 |---|---|
 | `trips` | `id`, `title`, `city_key`, `start_date`, `end_date`, `timezone`, `pace`, `status` |
-| `places` | `id`, `google_place_id` UNIQUE nullable, `label`, `category`, `user_note`, `source` (takeout / url / search / ai), `source_ref`, `resolve_status`, `created_at` |
+| `places` | `id`, `google_place_id` UNIQUE nullable, `label`, `local_name` (사용자 입력 또는 수락한 AI 조사의 현지 이름), `category`, `user_note`, `source` (takeout / url / search / ai), `source_ref`, `resolve_status`, `created_at` |
 | `trip_pins` | `trip_id`, `place_id`, `priority` (must / want / maybe), `dwell_min`, `meal` (lunch / dinner / null), `reserved_start`, `reserved_end`, `locked_date`, `note`, `added_by` (user / ai) |
 | `hours_overrides` | `place_id`, `date`, `status` (open / closed / special / unknown), `open_time`, `close_time`, `source` (ai_research / user), `source_url`, `checked_at`. Google 영업시간은 저장하지 않음 (6절) |
 | `stays` | `id`, `trip_id`, `place_id`, `label`, `check_in`, `check_out`, `total_amount`, `currency`, `booking_url`, `status` (candidate / booked) |
@@ -218,7 +218,7 @@ dongseon/
 | `api_usage` | `month`, `sku`, `count` |
 | `weather` | `city_key`, `date`, `kind` (forecast / climate), `payload_json`, `fetched_at` |
 | `fx_rates` | `date`, `base`, `quote`, `rate` |
-| `checklist_items` | `trip_id`, `text`, `done`, `sort` |
+| `checklist_items` | `trip_id`, `section`, `text`, `url`, `done`, `sort` |
 | `llm_runs` | jipsa와 동일 |
 | `job_log` | `job`, `key`, `status`, `rows`, `ran_at`, `error` |
 
@@ -441,7 +441,10 @@ uv run --no-sync dongseon serve
 | GET | `/api/trips/{id}/plan-suggestions`, `/api/plan-suggestions/{id}/preview` | AI 일정 제안 목록, 지금 버전에 적용한 미리보기 (저장 안 함) |
 | POST | `/api/plan-suggestions/{id}/accept`, `/api/plan-suggestions/{id}/reject` | 일정 제안 처리 (재검증 후 새 버전) |
 | POST | `/api/suggestions/{id}/accept`, `/api/suggestions/{id}/reject` | 장소·숙소 추천 처리 |
-| GET | `/api/itineraries/{id}/export.ics`, `/api/itineraries/{id}/print` | 내보내기 |
+| GET | `/api/itineraries/{id}/export.ics`, `/api/itineraries/{id}/print`, `/api/itineraries/{id}/mymaps.zip` | 내보내기 (캘린더, 인쇄, 날짜별 내 지도 CSV) |
+| GET/POST/PATCH/DELETE | `/api/trips/{id}/checklist`, `/api/trips/{id}/checklist/seed`, `/api/checklist/{id}` | 준비 체크리스트 |
+| GET | `/api/trips/{id}/bookings` | 예약 정보 모음 (확정 항공·숙소, 예약 시각) |
+| GET | `/api/trips/{id}/offline` | 휴대폰 오프라인 사본 (일정 순서·시각·라벨·메모·딥링크, 체크리스트, 예약) |
 | GET | `/api/trips/{id}/today` | 오늘 화면 (여행 중엔 오늘, 전엔 첫날, 날씨, 환율) |
 | GET | `/api/trips/{id}/weather` | 여행 날짜별 날씨 (예보 또는 평년) |
 | GET | `/api/trips/{id}/alerts`, POST `/api/alerts/{id}/dismiss` | 현재 버전에 대한 알림 (D-7 영업시간 재검사) |
@@ -465,7 +468,7 @@ uv run --no-sync dongseon serve
 | M2.6 | 실시간 가격 (2026-11-05 사용자 요청): Ignav 왕복 운임(인천 출발 직항, 1시간당 비용 순 추천), 楽天トラベル 빈방(상위 동네 역 반경 1km), 날짜별 최저가 기록, 후보로 추가, `prices`·`daily` 잡과 launchd `com.dongseon.daily` | 매일 아침 운임·빈방이 갱신되고 화면에서 바로 후보로 넣을 수 있음 |
 | M3 | (M3a: 영업시간·연휴, OR-Tools solver(날짜별 복사본 + 하루 분량 균형), 경고, 버전 저장, 타임라인·날짜별 지도·길찾기 / M3b: 편집(순서·날짜 옮기기·빼기·넣기, 옮긴 곳 자동 잠금)·잠금 유지 다시 맞추기·버전 비교와 되돌리기·영업시간 직접 입력. Google 도보 확인은 서버 키의 Routes API 권한이 생기면 붙임) 일정: 날짜별 영업 시간창, OR-Tools solver, validator, 타임라인·날짜별 지도, 드래그·잠금·다시 맞추기, 버전, Google Maps 딥링크 | 5일 일정 초안이 경고와 함께 나오고 편집 후 다시 맞추기가 동작 |
 | M4 | (M4a: AI 일정 검토·비 오는 날 대안 — 제안마다 그대로 시각 계산 후 경고가 늘면 바뀌는 날만 다시 맞춤, 미리보기 diff, 수락 시 새 버전. 비 오는 날은 날짜별 버튼으로 시작하고 M5에서 예보와 연결 / M4b: 연휴 영업시간 AI 조사(출처·확신도 있는 날짜만 저장), 동네 메모, 예약 메일 붙여넣기(가림 후 읽어 항공·숙소 입력 화면을 채움, 원문 저장 안 함)) AI: plan_review, rain_plan, hours_research, stay_area_notes, booking_parse (claude_cli·맛집 조사·수락 흐름은 M2.5에서 먼저 함) | AI 제안이 재solve와 검증을 거쳐 diff로 보이고 수락하면 새 버전이 생김 |
-| M5 | (M5a: 오늘 탭(지금·다음 일정, 길찾기, 환율 계산), Open-Meteo 날씨(16일 이내 예보, 그 뒤는 지난 5년 평년값), D-7부터 Google 특별 영업시간으로 현재 일정을 다시 검사해 경고가 바뀌면 홈·일정·오늘에 알림(경고 문구만 저장), 비 예보 날짜는 daily가 비 오는 날 대안을 미리 만듦, 저장된 일정에서 Google 영업시각 제거 / M5b: 준비 탭, 내보내기, 오프라인) 여행 모드: 오늘 화면, 날씨·환율, D-7 영업시간 갱신, `daily`와 launchd, `serve` 상시 실행, 원격 접속, PWA 오프라인, ICS·인쇄 내보내기, 체크리스트 | 휴대폰 데이터망으로 원격 도메인에서 오늘 일정과 길찾기가 열리고, 비행기 모드에서도 일정을 읽을 수 있음 |
+| M5 | (M5a: 오늘 탭(지금·다음 일정, 길찾기, 환율 계산), Open-Meteo 날씨(16일 이내 예보, 그 뒤는 지난 5년 평년값), D-7부터 Google 특별 영업시간으로 현재 일정을 다시 검사해 경고가 바뀌면 홈·일정·오늘에 알림(경고 문구만 저장), 비 예보 날짜는 daily가 비 오는 날 대안을 미리 만듦, 저장된 일정에서 Google 영업시각 제거 / M5b: 준비 탭(체크리스트 템플릿, 확정 항공·숙소·예약 시각 모음), ICS·인쇄·날짜별 Google 내 지도 CSV zip·날짜별 경로 링크 내보내기(영업시간·좌표 없음, 장소의 현지 이름은 사용자 데이터), 휴대폰 IndexedDB 오프라인 사본과 앱 껍데기만 담는 직접 작성한 service worker, README 출발 전 점검) 여행 모드: 오늘 화면, 날씨·환율, D-7 영업시간 갱신, `daily`와 launchd, `serve` 상시 실행, 원격 접속, PWA 오프라인, ICS·인쇄 내보내기, 체크리스트 | 휴대폰 데이터망으로 원격 도메인에서 오늘 일정과 길찾기가 열리고, 비행기 모드에서도 일정을 읽을 수 있음 |
 | M6 | (선택) Google Takeout "저장됨" 가져오기(2026-11-05 사용자 요청으로 M1에서 이동), 여행 중 지출 기록, 여행 후 회고(실제 방문 체크, 체류시간 보정), 항공·숙소 가격 adapter, 다른 도시 config | 사용자와 범위를 합의한 뒤 |
 
 ---

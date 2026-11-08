@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import type { FxOut, ItemOut } from '../api/client'
+import type { FxOut, ItemOut, OfflineOut, OfflineStopOut } from '../api/client'
 import { useToday } from '../api/hooks'
 import { HoursAlert } from '../components/HoursAlert'
 import { Page } from '../components/MapLayout'
@@ -10,43 +10,157 @@ import { formatMoney } from '../lib/format'
 import { directionsUrl } from '../lib/itinerary'
 import { CATEGORY_EMOJI } from '../lib/places'
 import { BTN } from '../lib/theme'
-import { clockIn, nowAndNext } from '../lib/today'
+import { isUnreachable, savedAtLabel } from '../lib/offline'
+import { clockIn, dateIn, nowAndNext } from '../lib/today'
 import { useCurrentTrip } from '../lib/trip'
+import { useOffline } from '../lib/useOffline'
 
-/** Re-render every 30 s so "지금" follows the clock. */
-function useClock(timeZone: string | undefined): string {
+/** The current time, refreshed every 30 s so "지금" follows the clock. */
+function useNow(): Date {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
     const t = window.setInterval(() => setNow(new Date()), 30_000)
     return () => window.clearInterval(t)
   }, [])
+  return now
+}
+
+function useClock(timeZone: string | undefined): string {
+  const now = useNow()
   return timeZone ? clockIn(timeZone, now) : ''
 }
 
-function StopCard({ item, tag, strong }: { item: ItemOut; tag: string; strong?: boolean }) {
+type CardStop = {
+  label: string
+  start: string
+  end: string
+  warnings: string[]
+  hours?: string | null
+  emoji?: string
+  href: string
+}
+
+function StopCard({ stop, tag, strong }: { stop: CardStop; tag: string; strong?: boolean }) {
   return (
     <section
       className={`space-y-2 rounded-2xl border p-4 ${strong ? 'border-teal-300 bg-teal-50' : 'border-gray-200 bg-white'}`}
     >
       <p className="text-xs font-semibold text-teal-800">
-        {tag} · {item.start}~{item.end} <span className="font-normal text-gray-500">(예상)</span>
+        {tag} · {stop.start}~{stop.end} <span className="font-normal text-gray-500">(예상)</span>
       </p>
       <p className="text-lg font-bold">
-        {CATEGORY_EMOJI[item.category ?? ''] ?? '📍'} {item.label}
+        {stop.emoji ?? '📍'} {stop.label}
       </p>
-      {item.hours && <p className="text-xs text-gray-500">영업 {item.hours}</p>}
-      {item.warnings.length > 0 && (
-        <p className="text-xs text-amber-800">⚠️ {item.warnings.join(' · ')}</p>
+      {stop.hours && <p className="text-xs text-gray-500">영업 {stop.hours}</p>}
+      {stop.warnings.length > 0 && (
+        <p className="text-xs text-amber-800">⚠️ {stop.warnings.join(' · ')}</p>
       )}
-      <a
-        href={directionsUrl(item)}
-        target="_blank"
-        rel="noreferrer"
-        className={`${BTN.primary} w-full`}
-      >
+      <a href={stop.href} target="_blank" rel="noreferrer" className={`${BTN.primary} w-full`}>
         Google 지도로 길찾기
       </a>
     </section>
+  )
+}
+
+function itemCard(i: ItemOut): CardStop {
+  return { ...i, emoji: CATEGORY_EMOJI[i.category ?? ''], href: directionsUrl(i) }
+}
+
+function offlineCard(s: OfflineStopOut): CardStop {
+  return { ...s, href: s.directions_url }
+}
+
+function StopRow({
+  label,
+  start,
+  href,
+  past,
+}: {
+  label: string
+  start: string
+  href: string
+  past: boolean
+}) {
+  return (
+    <li
+      className={`flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 ${past ? 'opacity-50' : ''}`}
+    >
+      <span className="w-11 shrink-0 text-sm font-semibold tabular-nums">{start}</span>
+      <span className="min-w-0 flex-1 truncate text-sm">{label}</span>
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={`${label} 길찾기`}
+        className="flex min-h-11 shrink-0 items-center rounded-lg px-2 text-xs font-medium text-teal-700 hover:bg-teal-50"
+      >
+        길찾기
+      </a>
+    </li>
+  )
+}
+
+/** The saved copy, for when the home Mac cannot be reached: any day, with now/next on today's date. */
+function OfflineToday({ bundle }: { bundle: OfflineOut }) {
+  const tz = bundle.trip.timezone
+  const now = useNow()
+  const hhmm = clockIn(tz, now)
+  const today = dateIn(tz, now)
+  const initial = bundle.days.find((d) => d.date === today)?.date ?? bundle.days[0]?.date ?? null
+  const [picked, setPicked] = useState<string | null>(initial)
+  const day = bundle.days.find((d) => d.date === picked) ?? null
+  const isToday = day?.date === today
+  const { current, next } = nowAndNext(day?.stops ?? [], isToday ? hhmm : '00:00')
+  return (
+    <Page>
+      <div>
+        <h1 className="text-xl font-bold">오늘 · 저장된 일정</h1>
+        <p className="text-sm text-gray-500">
+          {bundle.trip.title} · 현지 시각 {hhmm} · {savedAtLabel(bundle.generated_at)} 저장
+          {bundle.version ? ` · v${bundle.version}` : ''}
+        </p>
+      </div>
+      {bundle.days.length === 0 ? (
+        <p className="text-sm text-gray-600">저장할 때 일정이 없었습니다.</p>
+      ) : (
+        <>
+          <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="날짜">
+            {bundle.days.map((d) => (
+              <button
+                key={d.date}
+                role="tab"
+                aria-selected={d.date === picked}
+                onClick={() => setPicked(d.date)}
+                className={`min-h-11 shrink-0 rounded-xl border px-3 text-sm ${d.date === picked ? 'border-teal-600 bg-teal-600 font-semibold text-white' : 'border-gray-300 bg-white text-gray-700'}`}
+              >
+                {dayLabel(`${d.date}T00:00`)}
+              </button>
+            ))}
+          </div>
+          {isToday && current && <StopCard stop={offlineCard(current)} tag="지금" strong />}
+          {isToday && next && <StopCard stop={offlineCard(next)} tag="다음" strong={!current} />}
+          {day && (
+            <section className="space-y-2">
+              <ol className="space-y-1">
+                {day.stops.map((s) => (
+                  <StopRow
+                    key={s.seq}
+                    label={s.label}
+                    start={s.start}
+                    href={s.directions_url}
+                    past={isToday && s.end <= hhmm}
+                  />
+                ))}
+              </ol>
+              <p className="text-[11px] text-gray-400">
+                {day.depot && `${day.depot}에서 출발 · `}시각은 모두 추정입니다. 길찾기는 연결이
+                필요합니다.
+              </p>
+            </section>
+          )}
+        </>
+      )}
+    </Page>
   )
 }
 
@@ -81,7 +195,10 @@ export function Today() {
   const { trip, trips } = useCurrentTrip()
   const today = useToday(trip?.id ?? null)
   const hhmm = useClock(trip?.timezone)
+  const { tripsDown, bundle } = useOffline()
 
+  const unreachable = tripsDown || (today.isError && isUnreachable(today.error))
+  if (unreachable && bundle) return <OfflineToday bundle={bundle} />
   if (trips.isPending) return <p className="text-gray-500">불러오는 중…</p>
   if (!trip) {
     return (
@@ -135,8 +252,8 @@ export function Today() {
 
       {t?.day && during && (
         <>
-          {current && <StopCard item={current} tag="지금" strong />}
-          {next && <StopCard item={next} tag="다음" strong={!current} />}
+          {current && <StopCard stop={itemCard(current)} tag="지금" strong />}
+          {next && <StopCard stop={itemCard(next)} tag="다음" strong={!current} />}
           {done && (
             <p className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-600">
               오늘 일정을 모두 마쳤습니다. {t.day.depot}(으)로 돌아가는 시각은{' '}
@@ -153,29 +270,15 @@ export function Today() {
             {during ? '오늘 전체' : `첫날 미리보기 · ${dayLabel(`${t.day.date}T00:00`)}`}
           </p>
           <ol className="space-y-1">
-            {t.day.items.map((i) => {
-              const past = during && i.end <= hhmm
-              return (
-                <li
-                  key={i.id}
-                  className={`flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 ${past ? 'opacity-50' : ''}`}
-                >
-                  <span className="w-11 shrink-0 text-sm font-semibold tabular-nums">
-                    {i.start}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-sm">{i.label}</span>
-                  <a
-                    href={directionsUrl(i)}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={`${i.label} 길찾기`}
-                    className="flex min-h-11 shrink-0 items-center rounded-lg px-2 text-xs font-medium text-teal-700 hover:bg-teal-50"
-                  >
-                    길찾기
-                  </a>
-                </li>
-              )
-            })}
+            {t.day.items.map((i) => (
+              <StopRow
+                key={i.id}
+                label={i.label}
+                start={i.start}
+                href={directionsUrl(i)}
+                past={during && i.end <= hhmm}
+              />
+            ))}
           </ol>
           <p className="text-[11px] text-gray-400">
             시각은 모두 추정입니다. 실제 이동은 Google 지도에서 확인하세요.

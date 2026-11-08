@@ -167,6 +167,7 @@ def test_scout_stores_validated_matched_suggestions_and_accept_flow(api: ApiHarn
     with session_scope(eng) as s:
         pin = s.scalar(select(TripPin).where(TripPin.trip_id == trip["id"]))
         assert pin is not None
+        assert pin.place.local_name == "鮨偽"  # kept for the My Maps export
         assert (pin.priority, pin.added_by, pin.meal, pin.place.label, pin.place.category) == (
             "maybe",
             "ai",
