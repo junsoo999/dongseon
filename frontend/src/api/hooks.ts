@@ -51,6 +51,7 @@ import {
   type SuggestionOut,
   type TripIn,
   type TripOut,
+  type TripPatch,
   type UsageResponse,
 } from './client'
 
@@ -87,6 +88,15 @@ export function useCategories() {
 
 export function useTrips() {
   return useQuery({ queryKey: ['trips'], queryFn: () => apiGet<TripOut[]>('/trips') })
+}
+
+/** Update trip fields (e.g. the airports the plan starts and ends at). */
+export function usePatchTrip(tripId: number | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: TripPatch) => apiSend<TripOut>('PATCH', `/trips/${tripId}`, body),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['trips'] }),
+  })
 }
 
 export function useCreateTrip() {

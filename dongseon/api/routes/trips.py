@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func, select
 
 from dongseon.api.deps import SessionDep, SettingsDep
+from dongseon.core.airports import load_airports
 from dongseon.core.cities import CityConfig, CityNotFoundError, list_cities, load_city
 from dongseon.db.models import Trip, TripPin
 
@@ -50,6 +51,15 @@ class TripPatch(BaseModel):
     end_date: date | None = None
     pace: Pace | None = None
     status: Literal["planning", "done"] | None = None
+    arrival_airport: str | None = Field(default=None, max_length=3)  # "" clears
+    departure_airport: str | None = Field(default=None, max_length=3)  # "" clears
+
+
+class AirportChoice(BaseModel):
+    """A city airport the trip can arrive at or leave from."""
+
+    code: str
+    name: str
 
 
 class TripOut(BaseModel):
@@ -67,6 +77,9 @@ class TripOut(BaseModel):
     pin_count: int
     center_lat: float | None
     center_lng: float | None
+    arrival_airport: str | None = None
+    departure_airport: str | None = None
+    airport_choices: list[AirportChoice] = Field(default_factory=list)
 
 
 def _city(settings: SettingsDep, key: str) -> CityConfig | None:
@@ -78,6 +91,7 @@ def _city(settings: SettingsDep, key: str) -> CityConfig | None:
 
 def _out(trip: Trip, settings: SettingsDep, pin_count: int) -> TripOut:
     city = _city(settings, trip.city_key)
+    names = load_airports(settings.airports_file)
     return TripOut(
         id=trip.id,
         title=trip.title,
@@ -91,6 +105,12 @@ def _out(trip: Trip, settings: SettingsDep, pin_count: int) -> TripOut:
         pin_count=pin_count,
         center_lat=city.center.lat if city and city.center else None,
         center_lng=city.center.lng if city and city.center else None,
+        arrival_airport=trip.arrival_airport,
+        departure_airport=trip.departure_airport,
+        airport_choices=[
+            AirportChoice(code=a.code, name=(info.name if (info := names.get(a.code)) else a.code))
+            for a in (city.airports if city else [])
+        ],
     )
 
 
@@ -153,8 +173,15 @@ def get_trip(trip_id: int, session: SessionDep, settings: SettingsDep) -> TripOu
 def patch_trip(trip_id: int, body: TripPatch, session: SessionDep, settings: SettingsDep) -> TripOut:
     """Update trip fields."""
     trip = get_trip_or_404(session, trip_id)
+    city = _city(settings, trip.city_key)
+    codes = {a.code for a in city.airports} if city else set()
     for key, value in body.model_dump(exclude_unset=True).items():
-        if value is not None:
+        if key in ("arrival_airport", "departure_airport"):
+            if value and value not in codes:
+                raise HTTPException(status_code=422, detail="이 도시의 공항이 아닙니다")
+            if value is not None:
+                setattr(trip, key, value or None)
+        elif value is not None:
             setattr(trip, key, value)
     if trip.end_date < trip.start_date:
         raise HTTPException(status_code=422, detail="종료일이 시작일보다 빠릅니다")

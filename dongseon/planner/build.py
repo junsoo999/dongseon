@@ -181,6 +181,29 @@ def airport_zone_pins(
     return out
 
 
+def is_meal(pin: TripPin) -> bool:
+    """A restaurant visit: marked as a meal, or a food place. Cafes, bars and dessert shops are not meals."""
+    return pin.meal is not None or pin.place.category == "food"
+
+
+def meal_slots(pin: TripPin, meals: dict[str, tuple[int, int]], tz: ZoneInfo) -> dict[str, tuple[int, int]] | None:
+    """The meal slots a pin may take (``None`` when it is not a meal).
+
+    A marked meal takes its own slot; another restaurant any slot. A reservation takes the slot its start falls in,
+    with the reserved time as the window (or no slot when it starts outside every slot).
+    """
+    if not is_meal(pin):
+        return None
+    if pin.reserved_start:
+        local = pin.reserved_start.astimezone(tz)
+        t = local.hour * 60 + local.minute
+        slot = next((k for k, (lo, hi) in meals.items() if lo <= t < hi), None)
+        return {slot: (t, t + pin.dwell_min)} if slot else None
+    if pin.meal:
+        return {pin.meal: meals[pin.meal]} if pin.meal in meals else None
+    return dict(meals)
+
+
 @dataclass
 class PlanContext:
     """Everything a version needs: days, stops with per-day windows, opening hours and the travel function."""
@@ -199,6 +222,7 @@ class PlanContext:
     hours: dict[int, dict[int, DayHours]]
     unplaceable: dict[int, str]
     meals: dict[str, tuple[int, int]]
+    max_meals: int
     approx: Approx
     travel: Callable[[object, object], int]
 
@@ -259,7 +283,7 @@ def prepare(
     # booked flight, the last day is assumed to leave from the airport most of those pins are next to.
     start_at: dict[int, AirportPoint] = {}
     end_at: dict[int, AirportPoint] = {}
-    accesses = airport_accesses(session, client, city) if ev or not flight else {}
+    accesses = airport_accesses(session, client, city)
     zone = airport_zone_pins(pins, coords, accesses, city)
     names = load_airports(settings.airports_file)
 
@@ -267,15 +291,19 @@ def prepare(
         info = names.get(code)
         return AirportPoint(code, f"{info.name if info else code} 공항", accesses[code])
 
-    codes = set(zone.values())
-    if ev:
-        if ev.ready_at and ev.access_in_min is not None and ev.arrival_airport in codes:
-            start_at[0] = airport_at(ev.arrival_airport)
+    # The first day starts at the arrival airport and the last day ends at the departure airport: the booked
+    # flight's, else the trip's chosen airports.
+    arrival = ev.arrival_airport if ev else trip.arrival_airport
+    departure = ev.departure_airport if ev else trip.departure_airport
+    if arrival in accesses:
+        start_at[0] = airport_at(arrival)
+        if ev and ev.ready_at and ev.access_in_min is not None:
             windows[0][0] -= ev.access_in_min
-        if ev.leave_by and ev.access_out_min is not None and ev.departure_airport in codes:
-            end_at[last] = airport_at(ev.departure_airport)
+    if departure in accesses:
+        end_at[last] = airport_at(departure)
+        if ev and ev.leave_by and ev.access_out_min is not None:
             windows[last][1] += ev.access_out_min
-    elif not flight and codes:
+    if not ev and zone and last not in end_at:
         end_at[last] = airport_at(Counter(zone.values()).most_common(1)[0][0])
         warnings[last].append(
             f"확정한 항공편이 없어 {end_at[last].label}에서 출국한다고 보고 공항 근처 장소를 넣었습니다"
@@ -333,6 +361,7 @@ def prepare(
                 google = HOURS_CACHE.get(gid, client.details_hours)
             except (PlaceNotFoundError, PlacesError):
                 google = None
+        slots = meal_slots(p, meals, tz)
         per_day: dict[int, list[tuple[int, int]]] = {}
         hours_by_pin[p.id] = {}
         for i, d in enumerate(dates):
@@ -349,6 +378,8 @@ def prepare(
             wins = h.windows if h.status == "open" else [(0, DAY_MIN)]
             if p.meal in meals:
                 wins = _intersect(wins, meals[p.meal])
+            elif slots:
+                wins = [w for slot in slots.values() for w in _intersect(wins, slot)]
             if p.reserved_start:
                 t = _local_minutes(p.reserved_start, tz, d)
                 wins = [(t, t + p.dwell_min)] if 0 <= t < DAY_MIN else []
@@ -359,7 +390,7 @@ def prepare(
             via = {i for i, a in (*start_at.items(), *end_at.items()) if a.code == zone[p.id]}
             if via:
                 per_day = {i: w for i, w in per_day.items() if i in via}
-        stops[p.id] = Stop(p.id, point, p.dwell_min, weights.get(p.priority, 1) * PENALTY_SCALE, per_day)
+        stops[p.id] = Stop(p.id, point, p.dwell_min, weights.get(p.priority, 1) * PENALTY_SCALE, per_day, slots=slots)
 
     zone_access = {
         coords[gid]: accesses[zone[p.id]] for p in pins if p.id in zone and (gid := p.place.google_place_id)
@@ -400,6 +431,7 @@ def prepare(
         hours=hours_by_pin,
         unplaceable=unplaceable,
         meals=meals,
+        max_meals=profile.max_meals_per_day,
         approx=approx,
         travel=travel,
     )
@@ -446,7 +478,7 @@ def _solve_layout(
             wins = stop.windows.get(i) or [(0, DAY_MIN)]
             stop = replace(stop, windows={i: wins}, lock=locks[pid])
         stops.append(stop)
-    plan = solve(ctx.days, stops, ctx.travel, time_limit_s=time_limit_s)
+    plan = solve(ctx.days, stops, ctx.travel, time_limit_s=time_limit_s, max_meals=ctx.max_meals)
     layout = {i: [v.key for v in plan.days.get(i, [])] for i in range(len(ctx.days))}
     return layout, plan.dropped, plan.status
 
@@ -562,6 +594,15 @@ def _store(
                 )
             )
         dw = list(ctx.day_warnings[i])
+        per_slot: dict[str, int] = {}
+        for v in visits:
+            start = v.start - i * DAY_MIN
+            slot = next((k for k, (lo, hi) in (ctx.stops[v.key].slots or {}).items() if lo <= start < hi), None)
+            if slot:
+                per_slot[slot] = per_slot.get(slot, 0) + 1
+        meal_count = sum(1 for v in visits if ctx.stops[v.key].slots is not None)
+        if any(n > 1 for n in per_slot.values()) or meal_count > ctx.max_meals:
+            dw.append(f"식당이 하루 {meal_count}곳입니다 (식사 시간대마다 한 곳, 하루 {ctx.max_meals}곳까지 권장)")
         return_min = back_abs - i * DAY_MIN
         if visits and return_min > day.end_min:
             over = return_min - day.end_min

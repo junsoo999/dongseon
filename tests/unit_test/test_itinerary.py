@@ -195,7 +195,7 @@ def test_edit_rejects_unknown_dates_and_duplicates(api: ApiHarness) -> None:
 
 
 @respx.mock
-def test_pins_next_to_the_departure_airport_go_on_the_way_to_the_flight(api: ApiHarness) -> None:
+def test_days_start_and_end_at_the_airports_and_airport_pins_go_on_the_way(api: ApiHarness) -> None:
     HOURS_CACHE._rows.clear()
     trip = api.create_trip()  # 2030-12-28 ~ 2031-01-01
     respx.get(FRANKFURTER_URL).respond(json=FX)
@@ -238,23 +238,36 @@ def test_pins_next_to_the_departure_airport_go_on_the_way_to_the_flight(api: Api
     api.client.post(f"/api/trips/{tid}/flights", json={"label": "확정", "status": "booked", "legs": legs})
     it = api.client.post(f"/api/trips/{tid}/itineraries/solve").json()
     first, last = it["days"][0], it["days"][-1]
-    assert (first["start_place"], first["end_place"]) == (None, None)  # no pin near the arrival airport (HND)
+    assert (first["start_place"], first["end_place"]) == ("하네다 공항", None)  # the booked arrival airport
+    assert first["start"] < "12:00"  # landed 10:30 + immigration, measured at the airport
     assert last["end_place"] == "나리타 공항" and last["start_place"] is None
     assert last["items"][-1]["pin_id"] == shop["id"]  # the last stop before the flight
     assert last["end"] <= "16:00"  # at the airport by departure minus the airport buffer
     assert last["back_at"] <= last["end"] and last["back_move_min"] < 15  # the shop is next to the airport
     assert all(i["pin_id"] != shop["id"] for d in it["days"][:-1] for i in d["items"])
 
-    # Departing from Haneda instead: the shop is planned like any other pin.
+    # Departing from Haneda instead: the day ends at Haneda and the shop is planned like any other pin.
     fid = api.client.get(f"/api/trips/{tid}/flights").json()[0]["id"]
     legs[1] |= {"dep_airport": "HND"}
     api.client.put(f"/api/trips/{tid}/flights/{fid}", json={"label": "확정", "status": "booked", "legs": legs})
     plain = api.client.post(f"/api/trips/{tid}/itineraries/solve").json()
-    assert all(d["end_place"] is None for d in plain["days"])
+    assert plain["days"][-1]["end_place"] == "하네다 공항"
+    assert all(d["end_place"] is None for d in plain["days"][:-1])
 
-    # No booked flight: the last day is assumed to leave from the shop's airport, with a warning.
+    # No booked flight and no chosen airports: the last day is assumed to leave from the shop's airport.
     assert api.client.delete(f"/api/trips/{tid}/flights/{fid}").status_code == 204
     guess = api.client.post(f"/api/trips/{tid}/itineraries/solve").json()
+    assert guess["days"][0]["start_place"] is None
     last = guess["days"][-1]
     assert last["end_place"] == "나리타 공항" and last["items"][-1]["pin_id"] == shop["id"]
     assert any("나리타 공항에서 출국한다고" in w for w in last["warnings"])
+
+    # The trip's chosen airports fix both ends until a flight is booked.
+    assert api.client.patch(f"/api/trips/{tid}", json={"arrival_airport": "XXX"}).status_code == 422
+    out = api.client.patch(f"/api/trips/{tid}", json={"arrival_airport": "NRT", "departure_airport": "NRT"}).json()
+    assert (out["arrival_airport"], [a["code"] for a in out["airport_choices"]]) == ("NRT", ["HND", "NRT"])
+    chosen = api.client.post(f"/api/trips/{tid}/itineraries/solve").json()
+    assert chosen["days"][0]["start_place"] == "나리타 공항" and chosen["days"][-1]["end_place"] == "나리타 공항"
+    assert not any("출국한다고" in w for w in chosen["days"][-1]["warnings"])
+    cleared = api.client.patch(f"/api/trips/{tid}", json={"arrival_airport": ""}).json()
+    assert cleared["arrival_airport"] is None and cleared["departure_airport"] == "NRT"

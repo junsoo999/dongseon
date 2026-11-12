@@ -76,7 +76,8 @@ dongseon/                           # repo root (uv project)
 | M3 | Itinerary: per-date hours windows, OR-Tools solver, validator, timeline + map, edit/lock/re-solve, versions | done (Google WALK check waits for Routes API access) |
 | M4 | AI: claude_cli, plan_review, rain_plan, food/hours/stay research, booking_parse, suggestion flow | done |
 | M5 | Trip mode: today screen, weather/FX, D-7 hours refresh, daily + launchd, remote access, PWA offline, exports | done |
-| M5+ | Local names by AI research (verified by IDs Only search), airport-zone pins on the arrival/departure day | in review |
+| M5+ | Local names by AI research (verified by IDs Only search), airport-zone pins on the arrival/departure day | done |
+| M5++ | First/last day start and end at the airports (trip setting until a flight is booked), meals capped at one per slot and 3 a day | in review |
 | M6 | (optional) Takeout saved-list import (moved from M1), spending log, retrospective, paid flight/stay adapters, other cities | |
 
 Update the status column when a milestone is accepted.

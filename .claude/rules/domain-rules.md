@@ -103,11 +103,18 @@ alwaysApply: true
   `extended_swap_active` and `relocate_and_make_active` must stay on, or visits never move between days.
 - Python 9.15 bindings: `SetAllowedVehiclesForIndex` takes no list; restrict days with `VehicleVar(idx).SetValues`.
   pytest must ignore the SWIG `builtin type ... has no __module__` DeprecationWarning (as errors it crashes import).
-- Airport days: pins within an airport's `zone_km` (city YAML, default 3 km) are only planned on the booked
-  flight's arrival day (when it lands there) or departure day (when it leaves from there). That day then starts or
-  ends at the airport (`Day.start_point` / `end_point`, `AirportPoint` in `planner/build.py`): the window moves by
-  the airport access minutes and travel to the airport uses its express links. Without such a day they are planned
-  like any other pin. A version's day stats carry `start_place` / `end_place` for the screens.
+- Airport days: the first day starts at the arrival airport and the last day ends at the departure airport
+  (`Day.start_point` / `end_point`, `AirportPoint` in `planner/build.py`): the booked flight's airports, else the
+  trip's `arrival_airport` / `departure_airport` (picked on the itinerary tab). With a booked flight the window moves
+  by the airport access minutes; travel to the airport and to pins near it uses its express links. Pins within an
+  airport's `zone_km` (city YAML, default 3 km) are only planned on a day that starts or ends there; with no flight
+  and no chosen airport, the last day is assumed to leave from that airport (day warning). Day stats carry
+  `start_place` / `end_place` for the screens.
+- Meals: a restaurant (category `food`, or a pin marked lunch/dinner) is a meal; cafes, bars and dessert are not.
+  Each meal takes one of the profile's `meal_windows` slots (default lunch, afternoon, dinner; the visit fits inside
+  the slot), at most one restaurant per slot a day and at most `max_meals_per_day` (3) a day: a solver dimension per
+  slot plus a total one. A reservation takes the slot its start falls in. User-edited layouts are not blocked but get
+  a day warning; restaurants left out for lack of slots say so.
 - Locked visits (`itinerary_items.locked`) keep their date and order on a re-solve: one copy on that day,
   `LOCK_PENALTY`, and cumul precedence constraints. Pins the user removed stay out (`solver_stats_json.excluded`).
 - Every version is timed by `solver.schedule()` (earliest start along the order) and checked in

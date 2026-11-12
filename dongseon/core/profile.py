@@ -76,7 +76,9 @@ class Profile(BaseModel):
     home_airports: list[str] = Field(default_factory=list)
     pace: Pace = "normal"
     day_windows: dict[Pace, TimeWindow]
-    meal_windows: dict[Literal["lunch", "dinner"], TimeWindow]
+    # Meal slots: a restaurant visit fits inside one, and each slot holds at most one restaurant a day.
+    meal_windows: dict[Literal["breakfast", "lunch", "afternoon", "dinner"], TimeWindow]
+    max_meals_per_day: int = Field(default=3, ge=1, le=4)
     buffers_min: Buffers = Field(default_factory=Buffers)
     priority_weights: dict[Priority, int] = Field(default_factory=lambda: {"must": 100, "want": 10, "maybe": 1})
     walking: Walking = Field(default_factory=Walking)
@@ -88,6 +90,13 @@ class Profile(BaseModel):
     def _pairs_to_windows(cls, value: object) -> object:
         if isinstance(value, dict):
             return {k: TimeWindow.from_pair(v) if isinstance(v, list) else v for k, v in value.items()}
+        return value
+
+    @field_validator("meal_windows")
+    @classmethod
+    def _default_third_meal(cls, value: dict[str, TimeWindow]) -> dict[str, TimeWindow]:
+        if "breakfast" not in value and "afternoon" not in value:  # profiles written before the third slot
+            value = {**value, "afternoon": TimeWindow(start=time(14, 30), end=time(17, 0))}
         return value
 
     @property

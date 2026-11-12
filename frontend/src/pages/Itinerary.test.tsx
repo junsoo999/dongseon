@@ -153,6 +153,35 @@ describe('Itinerary', () => {
     expect(screen.getByText('지도 1곳')).toBeInTheDocument()
   })
 
+  it('picks the arrival and departure airports for the trip', async () => {
+    const withAirports = {
+      ...trip,
+      arrival_airport: null,
+      departure_airport: 'NRT',
+      airport_choices: [
+        { code: 'HND', name: '하네다' },
+        { code: 'NRT', name: '나리타' },
+      ],
+    }
+    const fetch = mockApi([
+      ['/itineraries/active', itinerary],
+      ['/api/trips', [withAirports]],
+    ])
+    renderPage()
+    const arrival = await screen.findByRole('combobox', { name: '도착' })
+    expect(screen.getByRole('combobox', { name: '출발' })).toHaveValue('NRT')
+    fireEvent.change(arrival, { target: { value: 'NRT' } })
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/trips/1',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ arrival_airport: 'NRT' }),
+        }),
+      ),
+    )
+  })
+
   it('ends a departure day at the airport when a pin next to it is planned last', async () => {
     const day = { ...itinerary.days[0], end_place: '나리타 공항', back_at: '15:59', end: '16:00' }
     mockApi([

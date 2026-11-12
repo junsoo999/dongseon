@@ -102,3 +102,61 @@ def test_schedule_waits_for_opening_and_flags_misses() -> None:
     assert visits[0].start == 10 * 60 and visits[0].in_window
     assert visits[1].start == 11 * 60 + 10 and not visits[1].in_window
     assert back_move == 40 and back == 12 * 60 + 10 + 40
+
+
+MEALS = {"breakfast": (9 * 60, 10 * 60 + 30), "lunch": (11 * 60 + 30, 13 * 60 + 30), "dinner": (18 * 60, 20 * 60 + 30)}
+
+
+def test_at_most_one_restaurant_per_meal_slot_and_cafes_are_free() -> None:
+    restaurants = [Stop(k, 10 * k, 60, 100_000, {0: ALL_DAY}, slots=dict(MEALS)) for k in range(1, 5)]
+    cafes = [Stop(10 + k, 5 * k, 30, 100_000, {0: ALL_DAY}) for k in range(1, 3)]
+    plan = solve(_days(1), restaurants + cafes, travel, time_limit_s=1)
+    visits = plan.days[0]
+    meals = [v for v in visits if v.key < 10]
+    assert len(meals) == 3 and {11, 12} <= {v.key for v in visits}
+    for v in meals:  # one in each slot, each inside its slot
+        assert sum(lo <= v.start < hi and v.end <= hi for lo, hi in MEALS.values()) == 1
+    assert len({next(k for k, (lo, hi) in MEALS.items() if lo <= v.start < hi) for v in meals}) == 3
+    [(dropped, reason)] = plan.dropped.items()
+    assert dropped < 10 and "식사 자리" in reason
+
+
+def test_a_marked_meal_only_takes_its_own_slot() -> None:
+    stops = [
+        Stop(1, 10, 60, 100_000, {0: ALL_DAY, 1: ALL_DAY}, slots={"dinner": MEALS["dinner"]}),
+        Stop(2, 20, 60, 100_000, {0: ALL_DAY, 1: ALL_DAY}, slots={"dinner": MEALS["dinner"]}),
+    ]
+    plan = solve(_days(2), stops, travel, time_limit_s=1)
+    assert not plan.dropped
+    assert sorted(len(plan.days[d]) for d in (0, 1)) == [1, 1]  # one dinner a day
+    assert all(v.start - v.day * DAY_MIN >= 18 * 60 for d in (0, 1) for v in plan.days[d])
+
+
+def test_meal_slots_follow_category_meal_mark_and_reservation() -> None:
+    from datetime import UTC, datetime
+    from zoneinfo import ZoneInfo
+
+    from dongseon.db.models import Place, TripPin
+    from dongseon.planner.build import meal_slots
+
+    tz = ZoneInfo("Asia/Tokyo")
+
+    def pin(category: str, meal: str | None = None, reserved: datetime | None = None) -> TripPin:
+        return TripPin(place=Place(label="x", category=category), meal=meal, reserved_start=reserved, dwell_min=60)
+
+    assert meal_slots(pin("cafe"), MEALS, tz) is None  # dessert and cafes are not meals
+    assert meal_slots(pin("food"), MEALS, tz) == MEALS
+    assert meal_slots(pin("bar", meal="dinner"), MEALS, tz) == {"dinner": MEALS["dinner"]}
+    at_12 = datetime(2030, 12, 28, 3, 0, tzinfo=UTC)  # 12:00 in Tokyo
+    assert meal_slots(pin("food", reserved=at_12), MEALS, tz) == {"lunch": (720, 780)}
+    at_16 = datetime(2030, 12, 28, 7, 0, tzinfo=UTC)  # 16:00: outside every slot, not counted
+    assert meal_slots(pin("food", reserved=at_16), MEALS, tz) is None
+
+
+def test_max_meals_caps_restaurants_even_with_more_slots() -> None:
+    slots = dict(MEALS) | {"afternoon": (14 * 60 + 30, 17 * 60)}  # four slots
+    restaurants = [Stop(k, 10 * k, 60, 100_000, {0: ALL_DAY}, slots=slots) for k in range(1, 5)]
+    plan = solve(_days(1), restaurants, travel, time_limit_s=1, max_meals=3)
+    assert len(plan.days[0]) == 3
+    [(_key, reason)] = plan.dropped.items()
+    assert "식사 자리" in reason
