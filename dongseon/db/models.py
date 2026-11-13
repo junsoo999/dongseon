@@ -57,6 +57,9 @@ class Trip(Base):
     timezone: Mapped[str]
     pace: Mapped[str]  # relaxed | normal | packed
     status: Mapped[str] = mapped_column(default="planning")  # planning | done
+    # Airports the first day starts at and the last day ends at until a flight is booked (IATA, city airports).
+    arrival_airport: Mapped[str | None]
+    departure_airport: Mapped[str | None]
     created_at: Mapped[datetime] = mapped_column(UTCDateTime())
 
     pins: Mapped[list["TripPin"]] = relationship(back_populates="trip", cascade="all, delete-orphan")

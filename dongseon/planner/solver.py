@@ -58,6 +58,8 @@ class Stop:
     penalty: int
     windows: dict[int, list[Window]]  # day index -> windows when the visit may start..end (local minutes)
     lock: tuple[int, int] | None = None  # (day index, order among that day's locked stops)
+    # A meal: the meal slots it may take (slot -> local window). Each slot holds at most one meal a day.
+    slots: dict[str, Window] | None = None
 
 
 @dataclass(frozen=True)
@@ -116,7 +118,7 @@ def schedule(
         m = 0 if s.point is prev else int(travel(prev, s.point))
         arrive = t + m
         start, fits = arrive, False
-        for lo, hi in _usable(s.windows.get(day.index, []), s.dwell_min, day):
+        for lo, hi in _usable(_meal_windows(s, day.index), s.dwell_min, day):
             if arrive <= hi:
                 start, fits = max(arrive, lo), True
                 break
@@ -143,6 +145,7 @@ def solve(
     *,
     time_limit_s: int = 3,
     balance_penalty: int = 2_000,
+    max_meals: int | None = None,
 ) -> Plan:
     """Plan visits across days.
 
@@ -152,6 +155,7 @@ def solve(
         travel: Minutes between two points (already including transfer buffers).
         time_limit_s: Local search time limit.
         balance_penalty: Cost per visit above the even share on a day (keep it below the drop penalties).
+        max_meals: At most this many meals (stops with slots) a day, on top of one per slot.
 
     Returns:
         Visits per day, the return to the stay per day, and dropped stops with reasons.
@@ -171,20 +175,30 @@ def solve(
         points.append(d.finish)
         service.append(0)
     copies: dict[int, list[tuple[int, list[Window]]]] = {}
+    node_slot: dict[int, str] = {}  # node -> meal slot
     by_key = {s.key: s for s in stops}
     for s in stops:
         for d in days:
             if s.lock and s.lock[0] != d.index:
                 continue
-            usable = _usable(s.windows.get(d.index, []), s.dwell_min, d)
-            if not usable:
-                continue
-            copies.setdefault(s.key, []).append(
-                (len(nodes), [(_abs(d.index, a), _abs(d.index, b)) for a, b in usable])
+            day_windows = s.windows.get(d.index, [])
+            variants: list[tuple[str | None, list[Window]]] = (
+                [(None, day_windows)]
+                if s.slots is None
+                else [(slot, _clip(day_windows, w)) for slot, w in s.slots.items()]
             )
-            nodes.append(("stop", s.key, d.index))
-            points.append(s.point)
-            service.append(s.dwell_min)
+            for slot, windows in variants:
+                usable = _usable(windows, s.dwell_min, d)
+                if not usable:
+                    continue
+                if slot is not None:
+                    node_slot[len(nodes)] = slot
+                copies.setdefault(s.key, []).append(
+                    (len(nodes), [(_abs(d.index, a), _abs(d.index, b)) for a, b in usable])
+                )
+                nodes.append(("stop", s.key, d.index))
+                points.append(s.point)
+                service.append(s.dwell_min)
     for s in stops:
         if s.key not in copies:
             plan.dropped[s.key] = _never_fits_reason(s, days)
@@ -216,6 +230,15 @@ def solve(
     )
     routing.AddDimension(count_idx, 0, len(stops) + 1, True, "visits")
     visits_dim = routing.GetDimensionOrDie("visits")
+    # At most one meal per slot per day.
+    for slot in sorted(set(node_slot.values())):
+        idx = routing.RegisterUnaryTransitCallback(
+            lambda index, slot=slot: 1 if node_slot.get(manager.IndexToNode(index)) == slot else 0
+        )
+        routing.AddDimension(idx, 0, 1, True, f"meal_{slot}")
+    if max_meals is not None and node_slot:
+        idx = routing.RegisterUnaryTransitCallback(lambda index: 1 if manager.IndexToNode(index) in node_slot else 0)
+        routing.AddDimension(idx, 0, max_meals, True, "meals")
     open_days = [d for d in days if d.end_min - d.start_min >= 60] or days
     per_day = max(1, -(-len(copies) // len(open_days)))
     for v, d in enumerate(days):
@@ -274,10 +297,45 @@ def solve(
             idx = solution.Value(routing.NextVar(idx))
         plan.days[d.index], plan.day_end[d.index] = schedule(d, order, travel)
         visited.update(s.key for s in order)
+    taken = {
+        (v.day, slot)
+        for vs in plan.days.values()
+        for v in vs
+        if (stop := by_key[v.key]).slots
+        for slot, (lo, hi) in stop.slots.items()
+        if lo <= v.start - _abs(v.day, 0) < hi
+    }
     for s in stops:
         if s.key not in visited and s.key not in plan.dropped:
-            plan.dropped[s.key] = "하루 시간 안에 넣지 못했습니다 (우선순위가 높은 곳 먼저)"
+            options = {(nodes[n][2], node_slot[n]) for n, _ in copies.get(s.key, []) if n in node_slot}
+            full_days = {
+                d
+                for d, vs in plan.days.items()
+                if max_meals and sum(by_key[v.key].slots is not None for v in vs) >= max_meals
+            }
+            if options and all(o in taken or o[0] in full_days for o in options):
+                plan.dropped[s.key] = "하루 식사 자리(시간대마다 한 곳)가 모두 찼습니다"
+            else:
+                plan.dropped[s.key] = "하루 시간 안에 넣지 못했습니다 (우선순위가 높은 곳 먼저)"
     return plan
+
+
+def _meal_windows(s: Stop, day: int) -> list[Window]:
+    """The stop's windows that day, cut to its meal slots when it is a meal."""
+    windows = s.windows.get(day, [])
+    if s.slots is None:
+        return windows
+    return sorted(w for bound in s.slots.values() for w in _clip(windows, bound))
+
+
+def _clip(windows: list[Window], bound: Window) -> list[Window]:
+    """Windows cut to ``bound``."""
+    out: list[Window] = []
+    for a, b in windows:
+        lo, hi = max(a, bound[0]), min(b, bound[1])
+        if hi > lo:
+            out.append((lo, hi))
+    return out
 
 
 def _never_fits_reason(s: Stop, days: list[Day]) -> str:

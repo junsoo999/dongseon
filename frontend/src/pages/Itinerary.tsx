@@ -38,6 +38,7 @@ import { dayTitles } from '../lib/planReview'
 import { CATEGORY_EMOJI, PRIORITY_LABELS, isPriority } from '../lib/places'
 import { BADGE, BTN } from '../lib/theme'
 import { useCurrentTrip } from '../lib/trip'
+import { TripAirports } from '../components/TripAirports'
 import { weatherLook } from '../lib/weather'
 
 function Warnings({ items }: { items: string[] }) {
@@ -501,6 +502,8 @@ export function Itinerary() {
           </button>
         )}
       </div>
+
+      {!draft && <TripAirports trip={trip} />}
 
       {it && !draft && (
         <div className="space-y-1">

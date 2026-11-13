@@ -1,5 +1,6 @@
 import csv
 import io
+import re
 import zipfile
 from datetime import UTC, date, datetime
 
@@ -96,7 +97,7 @@ def test_exports_carry_the_plan_but_no_google_content(api: ApiHarness) -> None:
 
     z = zipfile.ZipFile(io.BytesIO(api.client.get(f"/api/itineraries/{v1['id']}/mymaps.zip").content))
     csvs = sorted(n for n in z.namelist() if n.endswith(".csv"))
-    assert csvs and csvs[0].startswith("day1_") and "README.txt" in z.namelist()
+    assert csvs and all(re.fullmatch(r"day\d+_\d{4}\.csv", n) for n in csvs) and "README.txt" in z.namelist()
     rows = [r for n in csvs for r in csv.DictReader(io.StringIO(z.read(n).decode()))]
     assert len(rows) == len(visits)
     m = next(r for r in rows if r["이름"] == "박물관")

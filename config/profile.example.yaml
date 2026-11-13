@@ -8,9 +8,11 @@ day_windows:
   relaxed: ["10:00", "20:00"]
   normal: ["09:00", "21:00"]
   packed: ["08:00", "22:00"]
-meal_windows:
+meal_windows:  # restaurant slots: one restaurant per slot a day (cafes and dessert do not count)
   lunch: ["11:30", "13:30"]
+  afternoon: ["14:30", "17:00"]
   dinner: ["18:00", "20:30"]
+max_meals_per_day: 3
 buffers_min:
   departure_airport: 120
   arrival_immigration: 60

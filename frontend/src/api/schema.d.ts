@@ -1309,6 +1309,16 @@ export interface components {
       stay: components['schemas']['StayItem'] | null
     }
     /**
+     * AirportChoice
+     * @description A city airport the trip can arrive at or leave from.
+     */
+    AirportChoice: {
+      /** Code */
+      code: string
+      /** Name */
+      name: string
+    }
+    /**
      * AirportOut
      * @description An airport for the leg form.
      */
@@ -3024,6 +3034,12 @@ export interface components {
       center_lat: number | null
       /** Center Lng */
       center_lng: number | null
+      /** Arrival Airport */
+      arrival_airport?: string | null
+      /** Departure Airport */
+      departure_airport?: string | null
+      /** Airport Choices */
+      airport_choices?: components['schemas']['AirportChoice'][]
     }
     /**
      * TripPatch
@@ -3040,6 +3056,10 @@ export interface components {
       pace?: ('relaxed' | 'normal' | 'packed') | null
       /** Status */
       status?: ('planning' | 'done') | null
+      /** Arrival Airport */
+      arrival_airport?: string | null
+      /** Departure Airport */
+      departure_airport?: string | null
     }
     /**
      * UsageResponse
